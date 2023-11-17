@@ -1,10 +1,13 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+const cors = require('cors'); // Import the cors package
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
+
+app.use(cors()); // Enable CORS for all routes
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
