@@ -1,46 +1,57 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const cors = require('cors'); // Import the cors package
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Enable CORS for all routes
-app.use(cors({
-    origin: '*',  // Replace with the actual URL of your React app
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
-}));
-
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
-});
+const clients = {}; // Store clients and their rooms
 
 io.on('connection', (socket) => {
-    console.log('A user connected');
+    console.log('socket connected');
 
-    socket.on('offer', (offer) => {
-        socket.broadcast.emit('offer', offer);
-    });
-
-    socket.on('answer', (answer) => {
-        socket.broadcast.emit('answer', answer);
-    });
-
-    socket.on('ice-candidate', (candidate) => {
-        socket.broadcast.emit('ice-candidate', candidate);
-    });
-
-    // Listen for 'message' from a peer and broadcast it to all other peers
-    socket.on('message', (message) => {
-        console.log(message);
-        socket.broadcast.emit('message', message);
+    socket.on('join', (roomId) => {
+        socket.join(roomId);
+        clients[socket.id] = { roomId };
+        console.log(`User joined room: ${roomId}`);
+        io.to(roomId).emit('userJoined', socket.id);
     });
 
     socket.on('disconnect', () => {
-        console.log('A user disconnected');
+        const { roomId } = clients[socket.id] || {};
+        console.log(`User disconnected from room: ${roomId}`);
+        if (roomId) {
+            socket.leave(roomId);
+            io.to(roomId).emit('userLeft', socket.id);
+            delete clients[socket.id];
+        }
+    });
+
+    socket.on('offer', ({ to, offer }) => {
+        io.to(to).emit('offer', { offer, from: socket.id });
+    });
+
+    socket.on('answer', ({ to, answer }) => {
+        io.to(to).emit('answer', { answer, from: socket.id });
+    });
+
+    socket.on('ice-candidate', ({ to, candidate }) => {
+        io.to(to).emit('ice-candidate', { candidate, from: socket.id });
+    });
+
+    socket.on('message', ({ to, from, message }) => {
+        io.to(to).emit('message', { message, from });
+    });
+
+    socket.on('disconnect', () => {
+        const { roomId } = clients[socket.id] || {};
+        console.log(`User disconnected from room: ${roomId}`);
+        if (roomId) {
+            socket.leave(roomId);
+            io.to(roomId).emit('userLeft', socket.id); // Broadcast to the room that a user left
+            delete clients[socket.id];
+        }
     });
 });
 
