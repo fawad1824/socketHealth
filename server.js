@@ -1,31 +1,41 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-
+const bodyParser = require('body-parser');
+const cors = require('cors');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
+const roomsRouter = require('./routes/rooms');
+const db = require('./db'); // Path to your db.js file
 
-const clients = {}; // Store clients and their rooms
+// Body parser middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// CORS middleware
+app.use(cors());
+
+db.raw('show tables')
+    .then(() => {
+        console.log('Database connected!');
+    })
+    .catch((err) => {
+        console.error('Error connecting to database:', err);
+    });
 
 io.on('connection', (socket) => {
+
     console.log('socket connected');
 
     socket.on('join', (roomId) => {
-        socket.join(roomId);
-        clients[socket.id] = { roomId };
-        console.log(`User joined room: ${roomId}`);
         io.to(roomId).emit('userJoined', socket.id);
+        io.to(roomId).emit('usersInRoom', rooms[roomId]);
     });
 
+
     socket.on('disconnect', () => {
-        const { roomId } = clients[socket.id] || {};
-        console.log(`User disconnected from room: ${roomId}`);
-        if (roomId) {
-            socket.leave(roomId);
-            io.to(roomId).emit('userLeft', socket.id);
-            delete clients[socket.id];
-        }
+        io.to(roomId).emit('userLeft', socket.id);
     });
 
     socket.on('offer', ({ to, offer }) => {
@@ -43,17 +53,10 @@ io.on('connection', (socket) => {
     socket.on('message', ({ to, from, message }) => {
         io.to(to).emit('message', { message, from });
     });
-
-    socket.on('disconnect', () => {
-        const { roomId } = clients[socket.id] || {};
-        console.log(`User disconnected from room: ${roomId}`);
-        if (roomId) {
-            socket.leave(roomId);
-            io.to(roomId).emit('userLeft', socket.id); // Broadcast to the room that a user left
-            delete clients[socket.id];
-        }
-    });
 });
+app.use('/api/', roomsRouter);
+
+
 
 const PORT = 8080;
 server.listen(PORT, () => {
