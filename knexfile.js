@@ -1,11 +1,12 @@
+
 module.exports = {
     development: {
       client: 'mysql',
       connection: {
-        host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USERS ||'new_user',
+        host: process.env.DB_HOST,
+        user: process.env.DB_USERS,
         password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME || 'sockets',
+        database: process.env.DB_NAME,
       },
       migrations: {
         directory: './db/migrations',
@@ -14,5 +15,4 @@ module.exports = {
         directory: './db/seeds',
       },
     },
-    // Other environments like production, staging, etc., can be added here
   };
