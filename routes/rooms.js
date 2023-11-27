@@ -82,6 +82,7 @@ router.post('/:roomId/join', async (req, res) => {
     }
 });
 
+// check profile
 router.post('/profile', async (req, res) => {
     const { user_id, first_name, last_name, role, email } = req.body;
     try {
@@ -105,9 +106,26 @@ router.post('/profile', async (req, res) => {
     }
 });
 
+// Chat
 router.post('/chat', async (req, res) => {
+    const roomSchema = Joi.object({
+        from: Joi.number().required(),
+        to: Joi.number().required(),
+        message: Joi.string().required(),
+    });
+    const { error } = roomSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({ status: false, message: error.details[0].message });
+    }
     try {
-
+        const { from, to, message } = req.body;
+        const chatNew = {
+            from,
+            to,
+            message,
+        };
+        await db('chat').insert(chatNew);
+        return res.status(200).json({ status: true, data: chatNew, message: 'Chat Created' });
     } catch (error) {
         return res.status(500).json({ status: true, error: error });
     }
@@ -115,3 +133,4 @@ router.post('/chat', async (req, res) => {
 
 
 module.exports = router;
+// AKIAYK2UM2DCSDION76P
