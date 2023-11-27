@@ -1,4 +1,5 @@
 const express = require('express');
+require('dotenv').config();
 const http = require('http');
 const socketIo = require('socket.io');
 const bodyParser = require('body-parser');
@@ -58,7 +59,7 @@ app.use('/api/', roomsRouter);
 
 
 
-const PORT = 8080;
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+const port = process.env.PORT;
+server.listen(port, () => {
+    console.log(`Server running on port ${port}`);
 });
