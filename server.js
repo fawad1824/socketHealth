@@ -7,7 +7,8 @@ const cors = require('cors');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
-const mysql = require('mysql');
+const roomsRouter = require('./routes/rooms');
+const db = require('./db'); // Path to your db.js file
 
 // Body parser middleware
 app.use(bodyParser.json());
@@ -16,43 +17,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // CORS middleware
 app.use(cors());
 
-
-
-
-// Replace with your MySQL database configuration
-const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: process.env.DB_PASSWORD,
-  database: 'sockets',
-});
-
-connection.connect((error) => {
-  if (error) {
-    console.error('Error connecting to MySQL:', error);
-    return;
-  }
-  console.log('Connected to MySQL');
-
-  // Perform a sample query
-  connection.query('SELECT 1 + 1 AS solution', (queryError, results) => {
-    if (queryError) {
-      console.error('Error executing query:', queryError);
-      return;
-    }
-    console.log('The solution is:', results[0].solution);
-  });
-
-  // Close the connection after the query
-  connection.end((endError) => {
-    if (endError) {
-      console.error('Error closing connection:', endError);
-      return;
-    }
-    console.log('Connection closed');
-  });
-});
-
+db.raw('show tables')
+    .then(() => {
+        console.log('Database connected!');
+    })
+    .catch((err) => {
+        console.error('Error connecting to database:', err);
+    });
 
 io.on('connection', (socket) => {
 
