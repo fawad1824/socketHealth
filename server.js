@@ -55,6 +55,7 @@ io.on('connection', (socket) => {
         io.to(to).emit('message', { message, from });
     });
 });
+app.use('/api/', roomsRouter);
 
 
 const port = process.env.PORT;
