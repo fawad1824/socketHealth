@@ -15,7 +15,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // CORS middleware
-app.use(cors());
+app.use(cors()); // Enable CORS for all routes
+
+
 
 db.raw('show tables')
     .then(() => {
@@ -25,18 +27,46 @@ db.raw('show tables')
         console.error('Error connecting to database:', err);
     });
 
+const rooms = {}; // Store rooms and their sockets
+
+
+ socketIo(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST','PUT'],
+    allowedHeaders: ['Content-Type'],
+    credentials: true,
+  },
+});
+
 io.on('connection', (socket) => {
 
     console.log('socket connected');
 
     socket.on('join', (roomId) => {
+        // Join the room
+        socket.join(roomId);
+
+        // Store the socket in the room
+        if (!rooms[roomId]) {
+            rooms[roomId] = [];
+        }
+        rooms[roomId].push(socket.id);
+
+        // Notify other users in the room about the new user
         io.to(roomId).emit('userJoined', socket.id);
         io.to(roomId).emit('usersInRoom', rooms[roomId]);
     });
 
-
     socket.on('disconnect', () => {
-        io.to(roomId).emit('userLeft', socket.id);
+        // Find the room the socket is in and remove it from the room
+        Object.keys(rooms).forEach((roomId) => {
+            const index = rooms[roomId].indexOf(socket.id);
+            if (index !== -1) {
+                rooms[roomId].splice(index, 1);
+                io.to(roomId).emit('userLeft', socket.id);
+            }
+        });
     });
 
     socket.on('offer', ({ to, offer }) => {
@@ -55,6 +85,7 @@ io.on('connection', (socket) => {
         io.to(to).emit('message', { message, from });
     });
 });
+
 app.use('/api/', roomsRouter);
 
 
