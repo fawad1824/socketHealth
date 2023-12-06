@@ -5,58 +5,85 @@ const Joi = require('joi');
 
 // Create Room for Call
 router.post('/room-create', async (req, res) => {
-    const { user_id, staff_id, first_name, last_name, role, email, image, token, role_id } = req.body;
+    const { user_id, user_firstname, user_lastname, user_role_id, user_email, user_image, user_token, doctor_id, doctor_firstname, doctor_lastname, doctor_role_id, doctor_email, doctor_image, doctor_token, appoint_id } = req.body;
 
     try {
         const roomSchema = Joi.object({
             user_id: Joi.number().required(),
-            staff_id: Joi.number().required(),
-            first_name: Joi.string().required(),
-            last_name: Joi.string().required(),
-            role: Joi.string().required(),
-            email: Joi.string().required(),
-            image: Joi.string().required(),
-            token: Joi.string().required(),
-            role_id: Joi.number().required(),
+            user_firstname: Joi.string().required(),
+            user_lastname: Joi.string().required(),
+            user_role_id: Joi.number().required(),
+            user_email: Joi.string().required(),
+            user_image: Joi.string().required(),
+            user_token: Joi.string().required(),
+
+            doctor_id: Joi.number().required(),
+            doctor_firstname: Joi.string().required(),
+            doctor_lastname: Joi.string().required(),
+            doctor_role_id: Joi.number().required(),
+            doctor_email: Joi.string().required(),
+            doctor_image: Joi.string().required(),
+            doctor_token: Joi.string().required(),
+
+            appoint_id: Joi.number().required() // Add appoint_id to the schema
         });
         const { error } = roomSchema.validate(req.body);
         if (error) {
             return res.status(400).json({ status: false, message: error.details[0].message });
         }
 
-        const roomName = "Room-" + Math.floor(Math.random() * 1000000); // Generates a random number between 0 to 999999
+        const userExists = await db('profile').where('user_id', user_id).first();
+        const doctorExists = await db('profile').where('user_id', doctor_id).first();
 
-        const newRoom = { name: roomName, staff_id };
-        const [roomID] = await db('rooms').insert(newRoom);
+        if (!userExists) {
+            const [userID] = await db('profile').insert({
+                user_id,
+                first_name: user_firstname,
+                last_name: user_lastname,
+                role_id: user_role_id,
+                email: user_email,
+                image: user_image,
+                token: user_token
+            });
+        }
 
-        const newProfile = {
-            user_id,
-            first_name,
-            last_name,
-            role,
-            email,
-            image,
-            token,
-            role_id: role_id || null // Set role_id to null if it's an empty string
-        };
+        if (!doctorExists) {
+            await db('profile').insert({
+                user_id: doctor_id,
+                first_name: doctor_firstname,
+                last_name: doctor_lastname,
+                role_id: doctor_role_id,
+                email: doctor_email,
+                image: doctor_image,
+                token: doctor_token
+            });
+        }
+        const existingRoom = await db('rooms').where('appoint_id', appoint_id).where('staff_id', doctor_id).first();
 
-        [profileID] = await db('profile').insert(newProfile);
+        if (!existingRoom) {
+            const roomName = `Room-${user_id}-${doctor_id}-${appoint_id}`;
+            const [roomID] = await db('rooms').insert({ name: roomName, staff_id: doctor_id, appoint_id });
 
-        // Create a new room_detail record linking room and profile
-        const newRoomDetail = { user_id, room_id: roomID, profile_id: profileID };
-        const [roomDetailID] = await db('room_detail').insert(newRoomDetail);
+            const userRoomDetail = { user_id, room_id: roomID };
+            const doctorRoomDetail = { user_id: doctor_id, room_id: roomID };
 
-        // Respond with the IDs of the inserted records
-        res.status(200).json(
-            {
-                "status": 200,
-                "message": "Room Created Successfully"
-            }
-        );
+            await db('room_detail').insert(userRoomDetail);
+            await db('room_detail').insert(doctorRoomDetail);
+        } else {
+            const userRoomDetail = { user_id, room_id: existingRoom.id };
+            const doctorRoomDetail = { user_id: doctor_id, room_id: existingRoom.id };
+
+            await db('room_detail').insert(userRoomDetail);
+            await db('room_detail').insert(doctorRoomDetail);
+        }
+
+
+        return res.status(200).json({ status: 200, message: "Room Created Successfully" });
     } catch (error) {
-        // Handle the insertion error
-        res.status(500).json({ error: 'Failed to create profile or room detail' });
+        console.error(error);
+        return res.status(500).json({ error: 'Failed to create profile or room detail' });
     }
+
 
 
 
