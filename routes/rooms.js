@@ -91,9 +91,9 @@ router.post('/room-create', async (req, res) => {
 });
 
 router.get('/rooms', async (req, res) => {
-    const { data, staff_id, user_id } = req.body;
+    const { staff_id, user_id } = req.body;
     try {
-        if (data == '1') {
+        if (staff_id) {
             const rooms = await db('rooms').where('staff_id', staff_id).select('*');
             if (rooms.length > 0) {
                 const roomIDs = rooms.map(room => room.id); // Extract room IDs
@@ -125,37 +125,13 @@ router.get('/rooms', async (req, res) => {
                 });
             }
         } else {
-            // Fetch room details and user profiles based on room detail IDs
-            const roomDetails = await db('room_detail').whereIn('user_id', user_id).select('*');
-            const roomDetailIDs = roomDetails.map(roomDe => roomDe.user_id);
-            const roomDetailID = roomDetails.map(roomDe => roomDe.id);
-
-            const userProfiles = await db('profile').whereIn('user_id', roomDetailIDs).select('*');
-            const rooms = await db('rooms').where('id', roomDetailID).select('*');
-
-
-            // Fetch chats based on room IDs
-            const chats = await db('chat').whereIn('room_id', roomIDs).select('*');
-
-            // Map user profiles and chats to their corresponding rooms
-            const roomsWithProfilesAndChats = rooms.map(room => {
-                const roomUsers = roomDetails
-                    .filter(detail => detail.room_id === room.id)
-                    .map(detail => userProfiles.find(profile => profile.user_id === detail.user_id));
-
-                const roomChats = chats.filter(chat => chat.room_id === room.id);
-
-                return { ...room, users: roomUsers, chats: roomChats };
-            });
-
             return res.status(200).json({
                 status: true,
-                data: roomsWithProfilesAndChats,
-                message: 'Room List with User Profiles and Chats',
+                data: "user_id",
+                message: 'user_id chat',
             });
         }
 
-        return res.status(404).json({ status: false, message: 'No rooms found for the provided staff ID' });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ status: false, message: 'Internal server error' });
