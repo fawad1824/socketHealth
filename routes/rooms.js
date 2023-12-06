@@ -58,6 +58,8 @@ router.post('/room-create', async (req, res) => {
                 token: doctor_token
             });
         }
+        let chat = ""; // Declare as 'let' instead of 'const'
+
         const existingRoom = await db('rooms').where('appoint_id', appoint_id).where('staff_id', doctor_id).first();
 
         if (!existingRoom) {
@@ -69,51 +71,23 @@ router.post('/room-create', async (req, res) => {
 
             await db('room_detail').insert(userRoomDetail);
             await db('room_detail').insert(doctorRoomDetail);
+
+            chat = await db('chat').where('from_id', doctor_id).where('to_id', user_id).where('room_id', roomID).select('*');
         } else {
             const userRoomDetail = { user_id, room_id: existingRoom.id };
             const doctorRoomDetail = { user_id: doctor_id, room_id: existingRoom.id };
 
             await db('room_detail').insert(userRoomDetail);
             await db('room_detail').insert(doctorRoomDetail);
+
+            chat = await db('chat').where('from_id', doctor_id).where('to_id', user_id).where('room_id', existingRoom.id).select('*');
         }
 
-
-        return res.status(200).json({ status: 200, message: "Room Created Successfully" });
+        return res.status(200).json({ status: 200, message: "Room Created Successfully", data: chat });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: 'Failed to create profile or room detail' });
     }
-
-
-
-
-
-
-
-    // const roomSchema = Joi.object({
-    //     user_id: Joi.number().required(),
-    //     room_name: Joi.string().required(),
-    // });
-    // const { doctor_id, room_name, } = req.body;
-    // try {
-    //     const { error } = roomSchema.validate(req.body);
-    //     if (error) {
-    //         return res.status(400).json({ status: false, message: error.details[0].message });
-    //     }
-    //     const user = await db('room').where('room_name', room_name).where('doctor_id', doctor_id).first();
-    //     if (user) {
-    //         return res.status(409).json({ status: true, data: user, message: 'Room already exists' });
-    //     }
-    //     const newRoom = {
-    //         doctor_id,
-    //         room_name,
-    //     };
-    //     await db('room').insert(newRoom);
-    //     return res.status(200).json({ status: true, data: newRoom, message: 'Room Created Successfully' });
-    // } catch (error) {
-    //     console.log(error);
-    //     return res.status(500).json({ error: "server error" });
-    // }
 });
 
 // Get All Room
@@ -126,15 +100,17 @@ router.get('/rooms/:staff_id', async (req, res) => {
             const roomIDs = rooms.map(room => room.id); // Extract room IDs
 
             const roomDetails = await db('room_detail').whereIn('room_id', roomIDs).select('*');
-            const profileIDs = roomDetails.map(detail => detail.profile_id); // Extract profile IDs
+            return res.status(500).json(roomDetails);
 
             const userProfiles = await db('profile').whereIn('id', profileIDs).select('*');
+
 
             return res.status(200).json({ status: true, data: { rooms, userProfiles }, message: 'Room List with User Profiles' });
         }
 
         return res.status(404).json({ status: false, message: 'No rooms found for the provided staff ID' });
     } catch (error) {
+        console.log(error);
         return res.status(500).json({ status: false, message: 'Internal server error' });
     }
 });
