@@ -34,26 +34,26 @@ router.post('/room-create', async (req, res) => {
         const doctorExists = await db('profile').where('user_id', doctor_id).first();
 
         if (!userExists) {
-             await db('profile').insert({
+            await db('profile').insert({
                 user_id,
-                first_name: user_firstname,
-                last_name: user_lastname,
-                role_id: user_role_id,
-                email: user_email,
-                image: user_image,
-                token: user_token
+                first_name: user_firstname ?? "",
+                last_name: user_lastname ?? "",
+                role_id: user_role_id ?? "",
+                email: user_email ?? "",
+                image: user_image ?? "",
+                token: user_token ?? ""
             });
         }
 
         if (!doctorExists) {
             await db('profile').insert({
-                user_id: doctor_id,
-                first_name: doctor_firstname,
-                last_name: doctor_lastname,
-                role_id: doctor_role_id,
-                email: doctor_email,
-                image: doctor_image,
-                token: doctor_token
+                user_id: doctor_id ?? "",
+                first_name: doctor_firstname ?? "",
+                last_name: doctor_lastname ?? "",
+                role_id: doctor_role_id ?? "",
+                email: doctor_email ?? "",
+                image: doctor_image ?? "",
+                token: doctor_token ?? ""
             });
         }
         let chat = ""; // Declare as 'let' instead of 'const'
