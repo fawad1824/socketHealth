@@ -91,10 +91,10 @@ router.post('/room-create', async (req, res) => {
 });
 
 router.get('/rooms', async (req, res) => {
-    const { staff_id, user_id } = req.body;
+    const { doctor_id, user_id } = req.body;
     try {
-        if (staff_id) {
-            const rooms = await db('rooms').where('staff_id', staff_id).select('*');
+        if (doctor_id) {
+            const rooms = await db('rooms').where('staff_id', doctor_id).select('*');
             if (rooms.length > 0) {
                 const roomIDs = rooms.map(room => room.id); // Extract room IDs
 
@@ -105,7 +105,8 @@ router.get('/rooms', async (req, res) => {
                 const userProfiles = await db('profile').whereIn('user_id', roomDetailIDs).select('*');
 
                 // Fetch chats based on room IDs
-                const chats = await db('chat').whereIn('room_id', roomIDs).select('*');
+                const chats = await db('chat').whereIn('room_id', roomIDs).where('is_read', 0).orderBy('id', 'desc').first();
+                const [unreadMessagesCount] = await db('chat').whereIn('room_id', roomIDs).where('is_read', 0).count('id as unread_count');
 
                 // Map user profiles and chats to their corresponding rooms
                 const roomsWithProfilesAndChats = rooms.map(room => {
@@ -113,9 +114,9 @@ router.get('/rooms', async (req, res) => {
                         .filter(detail => detail.room_id === room.id)
                         .map(detail => userProfiles.find(profile => profile.user_id === detail.user_id));
 
-                    const roomChats = chats.filter(chat => chat.room_id === room.id);
 
-                    return { ...room, users: roomUsers, chats: roomChats };
+
+                    return { ...room, users: roomUsers, chats: chats, unreadMessagesCount };
                 });
 
                 return res.status(200).json({
