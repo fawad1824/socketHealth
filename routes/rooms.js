@@ -11,6 +11,7 @@ router.post('/room-create', async (req, res) => {
         const roomSchema = Joi.object({
             user_id: Joi.number().required(),
             user_firstname: Joi.string().required(),
+            user_lastname: Joi.string().required(), // Add user_lastname
             user_role_id: Joi.number().required(),
             user_email: Joi.string().required(),
             user_image: Joi.string().required(),
@@ -18,6 +19,7 @@ router.post('/room-create', async (req, res) => {
 
             doctor_id: Joi.number().required(),
             doctor_firstname: Joi.string().required(),
+            doctor_lastname: Joi.string().required(), // Add doctor_lastname
             doctor_role_id: Joi.number().required(),
             doctor_email: Joi.string().required(),
             doctor_image: Joi.string().required(),
