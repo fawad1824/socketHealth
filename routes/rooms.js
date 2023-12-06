@@ -11,7 +11,6 @@ router.post('/room-create', async (req, res) => {
         const roomSchema = Joi.object({
             user_id: Joi.number().required(),
             user_firstname: Joi.string().required(),
-            user_lastname: Joi.string().required(),
             user_role_id: Joi.number().required(),
             user_email: Joi.string().required(),
             user_image: Joi.string().required(),
@@ -19,7 +18,6 @@ router.post('/room-create', async (req, res) => {
 
             doctor_id: Joi.number().required(),
             doctor_firstname: Joi.string().required(),
-            doctor_lastname: Joi.string().required(),
             doctor_role_id: Joi.number().required(),
             doctor_email: Joi.string().required(),
             doctor_image: Joi.string().required(),
@@ -36,7 +34,7 @@ router.post('/room-create', async (req, res) => {
         const doctorExists = await db('profile').where('user_id', doctor_id).first();
 
         if (!userExists) {
-            const [userID] = await db('profile').insert({
+             await db('profile').insert({
                 user_id,
                 first_name: user_firstname,
                 last_name: user_lastname,
@@ -90,22 +88,69 @@ router.post('/room-create', async (req, res) => {
     }
 });
 
-// Get All Room
-router.get('/rooms/:staff_id', async (req, res) => {
-    const { staff_id } = req.params;
+router.get('/rooms', async (req, res) => {
+    const { data, staff_id, user_id } = req.body;
     try {
-        const rooms = await db('rooms').where('staff_id', staff_id).select('*');
+        if (data == '1') {
+            const rooms = await db('rooms').where('staff_id', staff_id).select('*');
+            if (rooms.length > 0) {
+                const roomIDs = rooms.map(room => room.id); // Extract room IDs
 
-        if (rooms.length > 0) {
-            const roomIDs = rooms.map(room => room.id); // Extract room IDs
+                // Fetch room details and user profiles based on room detail IDs
+                const roomDetails = await db('room_detail').whereIn('room_id', roomIDs).select('*');
+                const roomDetailIDs = roomDetails.map(roomDe => roomDe.user_id);
 
-            const roomDetails = await db('room_detail').whereIn('room_id', roomIDs).select('*');
-            return res.status(500).json(roomDetails);
+                const userProfiles = await db('profile').whereIn('user_id', roomDetailIDs).select('*');
 
-            const userProfiles = await db('profile').whereIn('id', profileIDs).select('*');
+                // Fetch chats based on room IDs
+                const chats = await db('chat').whereIn('room_id', roomIDs).select('*');
+
+                // Map user profiles and chats to their corresponding rooms
+                const roomsWithProfilesAndChats = rooms.map(room => {
+                    const roomUsers = roomDetails
+                        .filter(detail => detail.room_id === room.id)
+                        .map(detail => userProfiles.find(profile => profile.user_id === detail.user_id));
+
+                    const roomChats = chats.filter(chat => chat.room_id === room.id);
+
+                    return { ...room, users: roomUsers, chats: roomChats };
+                });
+
+                return res.status(200).json({
+                    status: true,
+                    data: roomsWithProfilesAndChats,
+                    message: 'Room List with User Profiles and Chats',
+                });
+            }
+        } else {
+            // Fetch room details and user profiles based on room detail IDs
+            const roomDetails = await db('room_detail').whereIn('user_id', user_id).select('*');
+            const roomDetailIDs = roomDetails.map(roomDe => roomDe.user_id);
+            const roomDetailID = roomDetails.map(roomDe => roomDe.id);
+
+            const userProfiles = await db('profile').whereIn('user_id', roomDetailIDs).select('*');
+            const rooms = await db('rooms').where('id', roomDetailID).select('*');
 
 
-            return res.status(200).json({ status: true, data: { rooms, userProfiles }, message: 'Room List with User Profiles' });
+            // Fetch chats based on room IDs
+            const chats = await db('chat').whereIn('room_id', roomIDs).select('*');
+
+            // Map user profiles and chats to their corresponding rooms
+            const roomsWithProfilesAndChats = rooms.map(room => {
+                const roomUsers = roomDetails
+                    .filter(detail => detail.room_id === room.id)
+                    .map(detail => userProfiles.find(profile => profile.user_id === detail.user_id));
+
+                const roomChats = chats.filter(chat => chat.room_id === room.id);
+
+                return { ...room, users: roomUsers, chats: roomChats };
+            });
+
+            return res.status(200).json({
+                status: true,
+                data: roomsWithProfilesAndChats,
+                message: 'Room List with User Profiles and Chats',
+            });
         }
 
         return res.status(404).json({ status: false, message: 'No rooms found for the provided staff ID' });
@@ -114,6 +159,7 @@ router.get('/rooms/:staff_id', async (req, res) => {
         return res.status(500).json({ status: false, message: 'Internal server error' });
     }
 });
+
 
 
 router.get('/get-rooms', async (req, res) => {
