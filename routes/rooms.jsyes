@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db'); // Path to your db.js file
 const Joi = require('joi');
-const axios = require('axios');
 
 // Create Room for Call
 router.post('/room-create', async (req, res) => {
@@ -244,48 +243,5 @@ router.post('/chat', async (req, res) => {
 });
 
 
-router.post('/fcm-token', async (req, res) => {
-    const { tokens, from, to } = req.body;
-    const fromU = await db('profile').where('user_id', from).first();
-    const toU = await db('profile').where('user_id', to).first();
-
-    if (!fromU || !toU) {
-        if (!fromU) {
-            return res.status(404).json({ status: true, data: fromU, message: 'From User not found' });
-        } else if (!toU) {
-            return res.status(404).json({ status: true, data: toU, message: 'To User not found' });
-        }
-    }
-
-
-    const doc = {
-        from: fromU,
-        to: toU,
-    };
-
-
-    const data = {
-        data: {
-            data: doc,
-            ACTION_CALL: 'CALL_ACTION',
-            ACTION_ACCEPT_CALL: 'ACCEPT_CALL_ACTION',
-            ACTION_REJECT_CALL: 'REJECT_CALL_ACTION',
-        },
-        registration_ids: tokens,
-    };
-
-    axios.post('https://fcm.googleapis.com/fcm/send', data, {
-        headers: {
-            Authorization: process.env.FCM_SERVER_KEY,
-            'Content-Type': 'application/json',
-        },
-    }).then((response) => {
-        return res.status(200).json({ status: true, from: fromU, to: toU, data: response.data, message: 'success' });
-    }).catch((error) => {
-        return res.status(500).json({ status: false, data: error, message: 'To User not found' });
-    });
-});
-
-
-
 module.exports = router;
+// AKIAYK2UM2DCSDION76P
