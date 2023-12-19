@@ -31,127 +31,107 @@ db.raw('show tables')
         console.error('Error connecting to database:', err);
     });
 
-const users = {};
+const activeUsers = new Set();
 
 io.on('connection', (socket) => {
-    console.log('New user connected:', socket.id);
+    // console.log('New user connected:', socket.id);
 
     // Handle user disconnect
-    socket.on('disconnect', async (from, to) => {
-        try {
-            const fromU = await db('profile').where('user_id', from).first();
-            const toU = await db('profile').where('user_id', to).first();
-
-            if (!fromU || !toU) {
-                // Handle user not found error
-                io.to(socket.id).emit('answer-error', { message: 'Users not found' });
-                return;
-            }
-
-            // Emit the ICE candidate to the intended recipient ('to')
-            io.to(to).emit('offer-forward', { socket: socket.id, from: fromU, to: toU });
-        } catch (error) {
-            console.error('Error handling ice-candidate:', error);
-            // Emit an error event back to the sender
-            io.to(socket.id).emit('offer', { message: 'Error handling ICE candidate' });
-        }
-    });
+    // socket.on('disconnect', async (from, to) => {
+    //     try {
+    //         io.to(to).emit('disconnect', { socket: socket.id });
+    //         console.log("dis");
+    //     } catch (error) {
+    //         console.error('Error handling ice-candidate:', error);
+    //         // Emit an error event back to the sender
+    //         io.to(socket.id).emit('offer', { message: 'Error handling ICE candidate' });
+    //     }
+    // });
 
     // Signaling events
-    socket.on('offer', async (from, to) => {
-        try {
-            const fromU = await db('profile').where('user_id', from).first();
-            const toU = await db('profile').where('user_id', to).first();
+    // socket.on('offer', async (data) => {
+    //     try {
+    //         const { from, to ,value} = data;
+    //         const fromU = await db('profile').where('user_id', from).first();
+    //         const toU = await db('profile').where('user_id', to).first();
 
-            if (!fromU || !toU) {
-                // Handle user not found error
-                io.to(socket.id).emit('answer-error', { message: 'Users not found' });
-                return;
-            }
+    //         if (!fromU || !toU) {
+    //             if (!fromU) {
+    //                 io.to(socket.id).emit('answer-error', { message: 'From User not found' });
+    //             } else if (!toU) {
+    //                 io.to(socket.id).emit('answer-error', { message: 'To User not found' });
+    //             }
+    //             return;
+    //         }
 
-            // Emit the ICE candidate to the intended recipient ('to')
-            io.to(to).emit('offer-forward', { socket: socket.id, from: fromU, to: toU });
-        } catch (error) {
-            console.error('Error handling ice-candidate:', error);
-            // Emit an error event back to the sender
-            io.to(socket.id).emit('offer', { message: 'Error handling ICE candidate' });
-        }
+    //         console.log(data);
+    //         console.log("offer" + socket.id +value);
+    //         io.to(to).emit('offer', { socket: socket.id, to: toU });
+    //     } catch (error) {
+    //         console.error('Error handling offer:', error);
+    //         // Emit an error event back to the sender
+    //         io.to(socket.id).emit('offer-error', { message: 'Error handling offer' });
+    //     }
+    // });
+
+
+
+
+    // socket.on('ice-candidate', async (to) => {
+    //     try {
+    //         const { from, to } = data;
+    //         const fromU = await db('profile').where('user_id', from).first();
+    //         const toU = await db('profile').where('user_id', to).first();
+
+    //         if (!fromU || !toU) {
+    //             if (!fromU) {
+    //                 io.to(socket.id).emit('ice-candidate', { message: 'From User not found' });
+    //             } else if (!toU) {
+    //                 io.to(socket.id).emit('ice-candidate', { message: 'To User not found' });
+    //             }
+    //             return;
+    //         }
+    //         // Emit the ICE candidate to the intended recipient ('to')
+    //         io.to(to).emit('ice-candidate', { socket: socket.id, from: fromU, to: toU });
+    //     } catch (error) {
+    //         console.error('Error handling ice-candidate:', error);
+    //         // Emit an error event back to the sender
+    //         io.to(socket.id).emit('ice-candidate-error', { message: 'Error handling ICE candidate' });
+    //     }
+    // });
+
+
+
+
+    socket.on('offer', (data) => {
+        console.log('Received offer:', data);
+        const { targetUserId, offerData, from } = data;
+        io.emit('offer', { "offer": offerData, "from": from, "targetUserId": targetUserId });
     });
 
-    socket.on('answer', async (from, to) => {
-        try {
-            const fromU = await db('profile').where('user_id', from).first();
-            const toU = await db('profile').where('user_id', to).first();
-
-            if (!fromU || !toU) {
-                // Handle user not found error
-                io.to(socket.id).emit('answer-error', { message: 'Users not found' });
-                return;
-            }
-
-            // Emit the ICE candidate to the intended recipient ('to')
-            io.to(to).emit('ice-candidate-forward', { socket: socket.id, from: fromU, to: toU });
-        } catch (error) {
-            console.error('Error handling ice-candidate:', error);
-            // Emit an error event back to the sender
-            io.to(socket.id).emit('answer', { message: 'Error handling ICE candidate' });
-        }
+    socket.on('offer-acknowledgment', (data) => {
+        console.log('Received offer acknowledgment:', data);
+        const { from, targetUserId, offerData } = data;
+        io.emit(`offer-acknowledgment-${targetUserId}`, { "offer": offerData, "from": from, "targetUserId": targetUserId });
     });
 
-    socket.on('ice-candidate', async (from, to) => {
-        try {
-            const fromU = await db('profile').where('user_id', from).first();
-            const toU = await db('profile').where('user_id', to).first();
-
-            if (!fromU || !toU) {
-                // Handle user not found error
-                io.to(socket.id).emit('ice-candidate-error', { message: 'Users not found' });
-                return;
-            }
-
-            // Emit the ICE candidate to the intended recipient ('to')
-            io.to(to).emit('ice-candidate-forward', { socket: socket.id, from: fromU, to: toU });
-        } catch (error) {
-            console.error('Error handling ice-candidate:', error);
-            // Emit an error event back to the sender
-            io.to(socket.id).emit('ice-candidate-error', { message: 'Error handling ICE candidate' });
-        }
+    socket.on('answer', (data) => {
+        console.log('Received answer:', data);
+        const { targetUserId, answerData, from } = data;
+        io.emit('answer', { "answerData": answerData, "from": from, "targetUserId": targetUserId });
     });
 
-    socket.on('create-room', async ({ from, to }) => {
-        try {
-            const fromU = await db('profile').where('user_id', from).first();
-            const toU = await db('profile').where('user_id', to).first();
-
-            if (!fromU || !toU) {
-                console.log("404");
-                // Emit an error event directly to the sender
-                io.to(socket.id).emit('room-creation-error', { status: 400, message: 'User profiles not found' });
-                return;
-            }
-
-            const data = {
-                from: fromU,
-                to: toU,
-            };
-
-            // Emit event to the intended recipient ('to') and send the room data
-            io.to(to).emit('room-created', { socket: socket.id, data });
-            io.to(socket.id).emit('room-creation-success', { status: 200, message: 'Room created successfully', data });
-        } catch (error) {
-            console.error('Error creating room:', error);
-            // Emit an error event directly to the sender
-            console.log("500");
-            io.to(socket.id).emit('room-creation-error', { status: 500, message: 'Internal server error' });
-        }
+    socket.on('ice-candidate', (data) => {
+        console.log('Received ICE candidate:', data);
+        const { from, targetUserId, iceCandidateData } = data;
+        io.emit(`ice-candidate-${targetUserId}`, { iceCandidateData, from, targetUserId });
     });
 
-
-    // const existingRoom = await db('rooms').where('appoint_id', appoint_id).where('staff_id', doctor_id).first();
-
-
-    // Store user in users object
-    users[socket.id] = socket;
+    socket.on('message', (data) => {
+        const { from, to, message } = data;
+        console.log('Chat :', data);
+        io.emit('receive-message', { from, to, message });
+    });
 });
 
 app.use('/api/', roomsRouter);

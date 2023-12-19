@@ -251,9 +251,9 @@ router.post('/fcm-token', async (req, res) => {
 
     if (!fromU || !toU) {
         if (!fromU) {
-            return res.status(404).json({ status: true, data: fromU, message: 'From User not found' });
+            return res.status(404).json({ status: false, data: fromU, message: 'From User not found' });
         } else if (!toU) {
-            return res.status(404).json({ status: true, data: toU, message: 'To User not found' });
+            return res.status(404).json({ status: false, data: toU, message: 'To User not found' });
         }
     }
 
