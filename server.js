@@ -134,6 +134,13 @@ io.on('connection', (socket) => {
             const fromU = await db('profile').where('user_id', from).first();
             const toU = await db('profile').where('user_id', to).first();
 
+            if (!fromU || !toU) {
+                if (!fromU) {
+                    io.emit('notification-error', { status: false, message: 'From User not found' });
+                } else if (!toU) {
+                    io.emit('notification-error', { status: false, message: 'To User not found' });
+                }
+            }
 
             const doc = {
                 from: fromU,
@@ -157,7 +164,7 @@ io.on('connection', (socket) => {
                     'Content-Type': 'application/json',
                 },
             }).then((response) => {
-                console.log(response.data);
+                console.log(response.data,);
                 console.log("Push notification added");
                 io.emit('notification-success', { status: true, data: response.data, message: 'success' });
             }).catch((error) => {
