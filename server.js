@@ -32,7 +32,7 @@ db.raw('show tables')
         console.error('Error connecting to database:', err);
     });
 
-const activeUsers = new Set();
+const connectedSockets = {};
 
 io.on('connection', (socket) => {
     // console.log('New user connected:', socket.id);
@@ -107,8 +107,13 @@ io.on('connection', (socket) => {
     socket.on('offer', (data) => {
         console.log('Received offer:', data);
         const { targetUserId, offerData, from } = data;
-        io.emit('offer', { "offer": offerData, "from": from, "targetUserId": targetUserId });
+        io.emit(`offer-${targetUserId}`, { "offer": offerData, "from": from, "targetUserId": targetUserId });
     });
+
+    socket.on('make-offer', (data) => {
+        const { targetUserId, from } = data;
+        io.emit(`make-offer-${targetUserId}`, { "from": from, "targetUserId": targetUserId });
+    });;
 
     socket.on('offer-acknowledgment', (data) => {
         console.log('Received offer acknowledgment:', data);
@@ -119,7 +124,7 @@ io.on('connection', (socket) => {
     socket.on('answer', (data) => {
         console.log('Received answer:', data);
         const { targetUserId, answerData, from } = data;
-        io.emit('answer', { "answerData": answerData, "from": from, "targetUserId": targetUserId });
+        io.emit(`answer-${targetUserId}`, { "answerData": answerData, "from": from, "targetUserId": targetUserId });
     });
 
     socket.on('ice-candidate', (data) => {
@@ -127,6 +132,7 @@ io.on('connection', (socket) => {
         const { from, targetUserId, iceCandidateData } = data;
         io.emit(`ice-candidate-${targetUserId}`, { iceCandidateData, from, targetUserId });
     });
+
     socket.on('message', async (data) => {
         try {
             const { from, to, message, tokens } = data;
@@ -177,11 +183,40 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('userID', (userID) => {
+        connectedSockets[userID] = socket.id; // Associate socket ID with user ID
+        console.log(socket.id);
+    });
+
+    socket.on('call-status', (data) => {
+        const { from, targetUserId, call_status } = data;
+        io.emit(`call-status-${targetUserId}`, { call_status , from, targetUserId });
+    });
+
+    socket.on('disconnect', () => {
+        const disconnectedUser = Object.keys(connectedSockets).find(
+            (key) => connectedSockets[key] === socket.id
+        );
+
+        if (disconnectedUser) {
+            delete connectedSockets[disconnectedUser];
+            console.log(`User ${disconnectedUser} disconnected`);
+            logAllConnectedUsers();
+        }
+    });
+
+    // Function to log all connected users
+    const logAllConnectedUsers = () => {
+        console.log('All connected users:');
+        console.log(connectedSockets);
+    };
+
 });
 
 app.use('/api/', roomsRouter);
 
 const port = process.env.PORT || 3000;
 server.listen(port, () => {
+
     console.log(`Server running on port ${port}`);
 });
