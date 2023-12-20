@@ -6,6 +6,7 @@ const bodyParser = require('body-parser');
 const app = express();
 const server = http.createServer(app);
 const db = require('./db'); // Path to your db.js file
+const axios = require('axios');
 
 const io = socketIo(server, {
     cors: {
@@ -126,12 +127,49 @@ io.on('connection', (socket) => {
         const { from, targetUserId, iceCandidateData } = data;
         io.emit(`ice-candidate-${targetUserId}`, { iceCandidateData, from, targetUserId });
     });
+    socket.on('message', async (data) => {
+        try {
+            const { from, to, message, tokens } = data;
+            io.emit('receive-message', { from, to, message });
+            const fromU = await db('profile').where('user_id', from).first();
+            const toU = await db('profile').where('user_id', to).first();
 
-    socket.on('message', (data) => {
-        const { from, to, message } = data;
-        console.log('Chat :', data);
-        io.emit('receive-message', { from, to, message });
+
+            const doc = {
+                from: fromU,
+                to: toU,
+            };
+
+            const data1 = {
+                data: {
+                    data: doc,
+                    ACTION_MESSAGE: "ACTION_MESSAGE",
+                    ACTION_CALL: 'CALL_ACTION',
+                    ACTION_ACCEPT_CALL: 'ACCEPT_CALL_ACTION',
+                    ACTION_REJECT_CALL: 'REJECT_CALL_ACTION',
+                },
+                registration_ids: tokens,
+            };
+
+            axios.post('https://fcm.googleapis.com/fcm/send', data1, {
+                headers: {
+                    Authorization: process.env.FCM_SERVER_KEY,
+                    'Content-Type': 'application/json',
+                },
+            }).then((response) => {
+                console.log(response.data);
+                console.log("Push notification added");
+                io.emit('notification-success', { status: true, data: response.data, message: 'success' });
+            }).catch((error) => {
+                console.error('FCM Error:', error.response.data);
+                io.emit('notification-error', { status: false, message: 'Error processing request' });
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            io.emit('notification-error', { status: false, message: 'Error processing request' });
+        }
     });
+
 });
 
 app.use('/api/', roomsRouter);
