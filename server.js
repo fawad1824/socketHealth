@@ -136,7 +136,7 @@ io.on('connection', (socket) => {
     socket.on('message', async (data) => {
         try {
             const { from, to, message, tokens } = data;
-            io.emit('receive-message', { from, to, message });
+            io.emit(`receive-message${to}`, { from, to, message });
             const fromU = await db('profile').where('user_id', from).first();
             const toU = await db('profile').where('user_id', to).first();
 
