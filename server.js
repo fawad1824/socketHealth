@@ -41,7 +41,7 @@ io.on('connection', (socket) =>
 
     socket.on('offer', (data) =>
     {
-        const { targetUserId, offerData, from } = data;
+        const { targetUserId, offerData, from, iceCandidates } = data;
         try
         {
             io.emit(`offer-${targetUserId}`, { "offerData": offerData, "from": from, "targetUserId": targetUserId, "iceCandidates": iceCandidates });
