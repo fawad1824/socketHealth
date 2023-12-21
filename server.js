@@ -35,102 +35,69 @@ db.raw('show tables')
 const connectedSockets = {};
 
 io.on('connection', (socket) => {
-    // console.log('New user connected:', socket.id);
-
-    // Handle user disconnect
-    // socket.on('disconnect', async (from, to) => {
-    //     try {
-    //         io.to(to).emit('disconnect', { socket: socket.id });
-    //         console.log("dis");
-    //     } catch (error) {
-    //         console.error('Error handling ice-candidate:', error);
-    //         // Emit an error event back to the sender
-    //         io.to(socket.id).emit('offer', { message: 'Error handling ICE candidate' });
-    //     }
-    // });
-
-    // Signaling events
-    // socket.on('offer', async (data) => {
-    //     try {
-    //         const { from, to ,value} = data;
-    //         const fromU = await db('profile').where('user_id', from).first();
-    //         const toU = await db('profile').where('user_id', to).first();
-
-    //         if (!fromU || !toU) {
-    //             if (!fromU) {
-    //                 io.to(socket.id).emit('answer-error', { message: 'From User not found' });
-    //             } else if (!toU) {
-    //                 io.to(socket.id).emit('answer-error', { message: 'To User not found' });
-    //             }
-    //             return;
-    //         }
-
-    //         console.log(data);
-    //         console.log("offer" + socket.id +value);
-    //         io.to(to).emit('offer', { socket: socket.id, to: toU });
-    //     } catch (error) {
-    //         console.error('Error handling offer:', error);
-    //         // Emit an error event back to the sender
-    //         io.to(socket.id).emit('offer-error', { message: 'Error handling offer' });
-    //     }
-    // });
-
-
-
-
-    // socket.on('ice-candidate', async (to) => {
-    //     try {
-    //         const { from, to } = data;
-    //         const fromU = await db('profile').where('user_id', from).first();
-    //         const toU = await db('profile').where('user_id', to).first();
-
-    //         if (!fromU || !toU) {
-    //             if (!fromU) {
-    //                 io.to(socket.id).emit('ice-candidate', { message: 'From User not found' });
-    //             } else if (!toU) {
-    //                 io.to(socket.id).emit('ice-candidate', { message: 'To User not found' });
-    //             }
-    //             return;
-    //         }
-    //         // Emit the ICE candidate to the intended recipient ('to')
-    //         io.to(to).emit('ice-candidate', { socket: socket.id, from: fromU, to: toU });
-    //     } catch (error) {
-    //         console.error('Error handling ice-candidate:', error);
-    //         // Emit an error event back to the sender
-    //         io.to(socket.id).emit('ice-candidate-error', { message: 'Error handling ICE candidate' });
-    //     }
-    // });
-
-
-
 
     socket.on('offer', (data) => {
-        console.log('Received offer:', data);
         const { targetUserId, offerData, from } = data;
-        io.emit(`offer-${targetUserId}`, { "offer": offerData, "from": from, "targetUserId": targetUserId });
+        try {
+            io.emit(`offer-${targetUserId}`, { "offer": offerData, "from": from, "targetUserId": targetUserId });
+        } catch (e) {
+            db('logs_sockets').insert({
+                socket_name: `offer-${targetUserId}`,
+                error: e,
+
+            });
+        }
     });
 
     socket.on('make-offer', (data) => {
         const { targetUserId, from } = data;
-        io.emit(`make-offer-${targetUserId}`, { "from": from, "targetUserId": targetUserId });
+        try {
+            io.emit(`make-offer-${targetUserId}`, { "from": from, "targetUserId": targetUserId });
+        } catch (e) {
+            db('logs_sockets').insert({
+                socket_name: `make-offer-${targetUserId}`,
+                error: e,
+            });
+        }
+
     });;
 
     socket.on('offer-acknowledgment', (data) => {
-        console.log('Received offer acknowledgment:', data);
         const { from, targetUserId, offerData } = data;
-        io.emit(`offer-acknowledgment-${targetUserId}`, { "offer": offerData, "from": from, "targetUserId": targetUserId });
+        try {
+            io.emit(`offer-acknowledgment-${targetUserId}`, { "offer": offerData, "from": from, "targetUserId": targetUserId });
+        } catch (e) {
+            db('logs_sockets').insert({
+                socket_name: `offer-acknowledgment-${targetUserId}`,
+                error: e,
+            });
+        }
+
     });
 
     socket.on('answer', (data) => {
-        console.log('Received answer:', data);
         const { targetUserId, answerData, from } = data;
-        io.emit(`answer-${targetUserId}`, { "answerData": answerData, "from": from, "targetUserId": targetUserId });
+        try {
+            io.emit(`answer-${targetUserId}`, { "answerData": answerData, "from": from, "targetUserId": targetUserId });
+        } catch (e) {
+            db('logs_sockets').insert({
+                socket_name: `answer-${targetUserId}`,
+                error: e,
+            });
+        }
     });
 
+
     socket.on('ice-candidate', (data) => {
-        console.log('Received ICE candidate:', data);
         const { from, targetUserId, iceCandidateData } = data;
-        io.emit(`ice-candidate-${targetUserId}`, { iceCandidateData, from, targetUserId });
+        try {
+            io.emit(`ice-candidate-${targetUserId}`, { iceCandidateData, from, targetUserId });
+        } catch (e) {
+            db('logs_sockets').insert({
+                socket_name: `ice-candidate-${targetUserId}`,
+                error: e,
+            });
+        }
     });
 
     socket.on('message', async (data) => {
@@ -184,13 +151,26 @@ io.on('connection', (socket) => {
     });
 
     socket.on('userID', (userID) => {
-        connectedSockets[userID] = socket.id; // Associate socket ID with user ID
-        console.log(socket.id);
+        try {
+            io.emit(`userID-${userID}`, { userID });
+        } catch (e) {
+            db('logs_sockets').insert({
+                socket_name: `userID-${userID}`,
+                error: e,
+            });
+        }
     });
 
     socket.on('call-status', (data) => {
         const { from, targetUserId, call_status } = data;
-        io.emit(`call-status-${targetUserId}`, { call_status , from, targetUserId });
+        try {
+            io.emit(`call-status-${targetUserId}`, { call_status, from, targetUserId });
+        } catch (e) {
+            db('logs_sockets').insert({
+                socket_name: `call-status-${targetUserId}`,
+                error: e,
+            });
+        }
     });
 
     socket.on('disconnect', () => {

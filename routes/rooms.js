@@ -141,7 +141,6 @@ router.get('/rooms', async (req, res) => {
 });
 
 
-
 router.get('/get-rooms', async (req, res) => {
     const { doc_id, patient_id } = req.params;
 
@@ -150,6 +149,47 @@ router.get('/get-rooms', async (req, res) => {
         return res.status(200).json({ status: true, data: rooms, message: 'Room List' });
     }
     return res.status(404).json({ status: false, message: 'Not Found' });
+});
+router.post('/add-error-logs', async (req, res) => {
+    const { error, socket_name, app_name } = req.body;
+    const roomSchema = Joi.object({
+        error: Joi.string().required(),
+        socket_name: Joi.string().required(),
+        app_name: Joi.string().required(),
+    });
+    try {
+        const { errors } = roomSchema.validate(req.body);
+        if (errors) {
+            return res.status(400).json({ status: false, message: errors.details[0].message });
+        }
+        const logData = {
+            error: error,
+            socket_name: socket_name,
+            app_name: app_name
+        };
+        const addLogs = await db('logs_sockets').insert(logData);
+
+        if (addLogs) {
+            return res.status(200).json({ status: true, data: addLogs, message: 'Error added to the database' });
+        } else {
+            return res.status(400).json({ status: false, message: 'Error adding to the database' });
+        }
+    } catch (e) {
+
+        const errorLogData = {
+            error: 'Exception ' + e,
+            socket_name: socket_name,
+            app_name: app_name
+        };
+        const logError = await db('logs_sockets').insert(errorLogData);
+
+        return res.status(500).json({
+            status: false,
+            message: 'Error adding to the database',
+            error: e.message,
+            loggedError: logError // This will be either the ID of the logged error or another indication of success/failure
+        });
+    }
 });
 
 // Join Room
@@ -256,7 +296,6 @@ router.post('/fcm-token', async (req, res) => {
             return res.status(404).json({ status: false, data: toU, message: 'To User not found' });
         }
     }
-
 
     const doc = {
         from: fromU,
