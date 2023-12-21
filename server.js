@@ -49,11 +49,11 @@ io.on('connection', (socket) =>
         {
             db('logs_sockets').insert({
                 socket_name: `offer-${targetUserId}`,
-                error: e,
-
+                error: e.message, // Access the error message here
             });
         }
     });
+
 
     socket.on('make-offer', (data) =>
     {
