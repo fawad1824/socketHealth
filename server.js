@@ -39,7 +39,7 @@ io.on('connection', (socket) => {
     socket.on('offer', (data) => {
         const { targetUserId, offerData, from } = data;
         try {
-            io.emit(`offer-${targetUserId}`, { "offer": offerData, "from": from, "targetUserId": targetUserId });
+            io.emit(`offer-${targetUserId}`, { "offerData": offerData, "from": from, "targetUserId": targetUserId });
         } catch (e) {
             db('logs_sockets').insert({
                 socket_name: `offer-${targetUserId}`,
