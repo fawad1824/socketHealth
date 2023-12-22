@@ -5,10 +5,12 @@ const Joi = require('joi');
 const axios = require('axios');
 
 // Create Room for Call
-router.post('/room-create', async (req, res) => {
+router.post('/room-create', async (req, res) =>
+{
     const { user_id, user_firstname, user_lastname, user_role_id, user_email, user_image, user_token, doctor_id, doctor_firstname, doctor_lastname, doctor_role_id, doctor_email, doctor_image, doctor_token, appoint_id } = req.body;
 
-    try {
+    try
+    {
         const roomSchema = Joi.object({
             user_id: Joi.number().required(),
             user_firstname: Joi.string().required(),
@@ -29,14 +31,16 @@ router.post('/room-create', async (req, res) => {
             appoint_id: Joi.number().required() // Add appoint_id to the schema
         });
         const { error } = roomSchema.validate(req.body);
-        if (error) {
+        if (error)
+        {
             return res.status(400).json({ status: false, message: error.details[0].message });
         }
 
         const userExists = await db('profile').where('user_id', user_id).first();
         const doctorExists = await db('profile').where('user_id', doctor_id).first();
 
-        if (!userExists) {
+        if (!userExists)
+        {
             await db('profile').insert({
                 user_id,
                 first_name: user_firstname ?? "",
@@ -48,7 +52,8 @@ router.post('/room-create', async (req, res) => {
             });
         }
 
-        if (!doctorExists) {
+        if (!doctorExists)
+        {
             await db('profile').insert({
                 user_id: doctor_id ?? "",
                 first_name: doctor_firstname ?? "",
@@ -63,7 +68,8 @@ router.post('/room-create', async (req, res) => {
 
         const existingRoom = await db('rooms').where('appoint_id', appoint_id).where('staff_id', doctor_id).first();
 
-        if (!existingRoom) {
+        if (!existingRoom)
+        {
             const roomName = `Room-${user_id}-${doctor_id}-${appoint_id}`;
             const [roomID] = await db('rooms').insert({ name: roomName, staff_id: doctor_id, appoint_id });
 
@@ -74,29 +80,43 @@ router.post('/room-create', async (req, res) => {
             await db('room_detail').insert(doctorRoomDetail);
 
             chat = await db('chat').where('from_id', doctor_id).where('to_id', user_id).where('room_id', roomID).select('*');
-        } else {
+        } else
+        {
             const userRoomDetail = { user_id, room_id: existingRoom.id };
             const doctorRoomDetail = { user_id: doctor_id, room_id: existingRoom.id };
 
-            await db('room_detail').insert(userRoomDetail);
-            await db('room_detail').insert(doctorRoomDetail);
+            chat = await db('chat').where('from_id', doctor_id).where('to_id', user_id).where('room_id', roomID).select('*');
 
-            chat = await db('chat').where('from_id', doctor_id).where('to_id', user_id).where('room_id', existingRoom.id).select('*');
+            checkRoomJ = await db('room_detail').where('room_id', existingRoom.id).where('user_id', user_id).select('*');
+            checkRoomD = await db('room_detail').where('room_id', existingRoom.id).where('user_id', doctor_id).select('*');
+            if (!checkRoomJ)
+            {
+                await db('room_detail').insert(userRoomDetail);
+            } else if (!checkRoomD)
+            {
+                await db('room_detail').insert(doctorRoomDetail);
+
+            }
         }
 
         return res.status(200).json({ status: 200, message: "Room Created Successfully", data: chat });
-    } catch (error) {
+    } catch (error)
+    {
         console.error(error);
         return res.status(500).json({ error: 'Failed to create profile or room detail' });
     }
 });
 
-router.get('/rooms', async (req, res) => {
+router.get('/rooms', async (req, res) =>
+{
     const { doctor_id, user_id } = req.body;
-    try {
-        if (doctor_id) {
+    try
+    {
+        if (doctor_id)
+        {
             const rooms = await db('rooms').where('staff_id', doctor_id).select('*');
-            if (rooms.length > 0) {
+            if (rooms.length > 0)
+            {
                 const roomIDs = rooms.map(room => room.id); // Extract room IDs
 
                 // Fetch room details and user profiles based on room detail IDs
@@ -110,7 +130,8 @@ router.get('/rooms', async (req, res) => {
                 const [unreadMessagesCount] = await db('chat').whereIn('room_id', roomIDs).where('is_read', 0).count('id as unread_count');
 
                 // Map user profiles and chats to their corresponding rooms
-                const roomsWithProfilesAndChats = rooms.map(room => {
+                const roomsWithProfilesAndChats = rooms.map(room =>
+                {
                     const roomUsers = roomDetails
                         .filter(detail => detail.room_id === room.id)
                         .map(detail => userProfiles.find(profile => profile.user_id === detail.user_id));
@@ -126,7 +147,8 @@ router.get('/rooms', async (req, res) => {
                     message: 'Room List with User Profiles and Chats',
                 });
             }
-        } else {
+        } else
+        {
             return res.status(200).json({
                 status: true,
                 data: "user_id",
@@ -134,32 +156,38 @@ router.get('/rooms', async (req, res) => {
             });
         }
 
-    } catch (error) {
+    } catch (error)
+    {
         console.log(error);
         return res.status(500).json({ status: false, message: 'Internal server error' });
     }
 });
 
 
-router.get('/get-rooms', async (req, res) => {
+router.get('/get-rooms', async (req, res) =>
+{
     const { doc_id, patient_id } = req.params;
 
     const rooms = await db('room').select('*');
-    if (rooms) {
+    if (rooms)
+    {
         return res.status(200).json({ status: true, data: rooms, message: 'Room List' });
     }
     return res.status(404).json({ status: false, message: 'Not Found' });
 });
-router.post('/add-error-logs', async (req, res) => {
+router.post('/add-error-logs', async (req, res) =>
+{
     const { error, socket_name, app_name } = req.body;
     const roomSchema = Joi.object({
         error: Joi.string().required(),
         socket_name: Joi.string().required(),
         app_name: Joi.string().required(),
     });
-    try {
+    try
+    {
         const { errors } = roomSchema.validate(req.body);
-        if (errors) {
+        if (errors)
+        {
             return res.status(400).json({ status: false, message: errors.details[0].message });
         }
         const logData = {
@@ -169,12 +197,15 @@ router.post('/add-error-logs', async (req, res) => {
         };
         const addLogs = await db('logs_sockets').insert(logData);
 
-        if (addLogs) {
+        if (addLogs)
+        {
             return res.status(200).json({ status: true, data: addLogs, message: 'Error added to the database' });
-        } else {
+        } else
+        {
             return res.status(400).json({ status: false, message: 'Error adding to the database' });
         }
-    } catch (e) {
+    } catch (e)
+    {
 
         const errorLogData = {
             error: 'Exception ' + e,
@@ -193,15 +224,18 @@ router.post('/add-error-logs', async (req, res) => {
 });
 
 // Join Room
-router.post('/:roomId/join', async (req, res) => {
+router.post('/:roomId/join', async (req, res) =>
+{
     const { roomId } = req.params;
     const { from } = req.body;
     const roomSchema = Joi.object({
         from: Joi.number().required(),
     });
-    try {
+    try
+    {
         const { error } = roomSchema.validate(req.body);
-        if (error) {
+        if (error)
+        {
             return res.status(400).json({ status: false, message: error.details[0].message });
         }
 
@@ -212,9 +246,11 @@ router.post('/:roomId/join', async (req, res) => {
             .where('to', Room.doctor_id)
             .where('from', from)
             .first();
-        if (!Room) {
+        if (!Room)
+        {
             return res.status(409).json({ status: true, message: 'Not Found' });
-        } else if (Calling) {
+        } else if (Calling)
+        {
             return res.status(409).json({ status: true, message: 'Already Join' });
         }
 
@@ -228,48 +264,58 @@ router.post('/:roomId/join', async (req, res) => {
         await db('calling').insert(joinRoom);
         return res.status(200).json({ status: true, data: joinRoom, message: 'User Profile Create' });
 
-    } catch (error) {
+    } catch (error)
+    {
         console.error('Error checking email:', error);
         return res.status(500).json({ status: true, error: error });
     }
 });
 
 // check profile
-router.post('/profile', async (req, res) => {
-    const { user_id, first_name, last_name, role, email } = req.body;
-    try {
+router.post('/profile', async (req, res) =>
+{
+    const { user_id, first_name, last_name, role, email, token } = req.body;
+    try
+    {
         const user = await db('profile').where('email', email).first();
-        if (user) {
+        if (user)
+        {
             return res.status(409).json({ status: true, data: user, message: 'User already exists' });
-        } else {
+        } else
+        {
             const newUser = {
                 user_id,
                 first_name,
                 last_name,
                 role,
-                email
+                email,
+                token
             };
             await db('profile').insert(newUser);
             return res.status(200).json({ status: true, data: newUser, message: 'User Profile Create' });
         }
-    } catch (error) {
+    } catch (error)
+    {
         console.error('Error checking email:', error);
         return res.status(500).json({ status: true, error: error });
     }
 });
 
 // Chat
-router.post('/chat', async (req, res) => {
+router.post('/chat', async (req, res) =>
+{
     const roomSchema = Joi.object({
         from: Joi.number().required(),
         to: Joi.number().required(),
         message: Joi.string().required(),
     });
     const { error } = roomSchema.validate(req.body);
-    if (error) {
+    if (error)
+    {
         return res.status(400).json({ status: false, message: error.details[0].message });
     }
-    try {
+    try
+    {
         const { from, to, message } = req.body;
         const chatNew = {
             from,
@@ -278,21 +324,26 @@ router.post('/chat', async (req, res) => {
         };
         await db('chat').insert(chatNew);
         return res.status(200).json({ status: true, data: chatNew, message: 'Chat Created' });
-    } catch (error) {
+    } catch (error)
+    {
         return res.status(500).json({ status: true, error: error });
     }
 });
 
 
-router.post('/fcm-token', async (req, res) => {
+router.post('/fcm-token', async (req, res) =>
+{
     const { tokens, from, to } = req.body;
     const fromU = await db('profile').where('user_id', from).first();
     const toU = await db('profile').where('user_id', to).first();
 
-    if (!fromU || !toU) {
-        if (!fromU) {
+    if (!fromU || !toU)
+    {
+        if (!fromU)
+        {
             return res.status(404).json({ status: false, data: fromU, message: 'From User not found' });
-        } else if (!toU) {
+        } else if (!toU)
+        {
             return res.status(404).json({ status: false, data: toU, message: 'To User not found' });
         }
     }
@@ -318,9 +369,11 @@ router.post('/fcm-token', async (req, res) => {
             Authorization: process.env.FCM_SERVER_KEY,
             'Content-Type': 'application/json',
         },
-    }).then((response) => {
+    }).then((response) =>
+    {
         return res.status(200).json({ status: true, from: fromU, to: toU, data: response.data, message: 'success' });
-    }).catch((error) => {
+    }).catch((error) =>
+    {
         return res.status(500).json({ status: false, data: error, message: 'To User not found' });
     });
 });

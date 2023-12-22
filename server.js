@@ -34,7 +34,7 @@ db.raw('show tables')
         console.error('Error connecting to database:', err);
     });
 
-const connectedSockets = {};
+const activeUsers = {};
 
 io.on('connection', (socket) =>
 {
@@ -176,19 +176,6 @@ io.on('connection', (socket) =>
         }
     });
 
-    socket.on('userID', (userID) =>
-    {
-        try
-        {
-            io.emit(`userID-${userID}`, { userID });
-        } catch (e)
-        {
-            db('logs_sockets').insert({
-                socket_name: `userID-${userID}`,
-                error: e,
-            });
-        }
-    });
 
     socket.on('call-status', (data) =>
     {
@@ -205,26 +192,46 @@ io.on('connection', (socket) =>
         }
     });
 
-    socket.on('disconnect', () =>
-    {
-        const disconnectedUser = Object.keys(connectedSockets).find(
-            (key) => connectedSockets[key] === socket.id
-        );
 
-        if (disconnectedUser)
+    socket.on('userStatus', async (data) =>
+    {
+        const { userId } = data;
+
+        if (!userId || !Array.isArray(userId))
         {
-            delete connectedSockets[disconnectedUser];
-            console.log(`User ${disconnectedUser} disconnected`);
-            logAllConnectedUsers();
+            return;
+        }
+
+        try
+        {
+            for (const id of userId)
+            {
+                activeUsers[id] = socket.id;
+
+                io.to(socket.id).emit(`userStatus-${id}`, { isActive: true, userId: id });
+                console.log(`User ${id} connected with socket ID: ${socket.id}`);
+
+                await db('profile').where({ user_id: id }).update({ status: 'isActive' });
+
+                socket.on(`disconnect-${id}`, async () =>
+                {
+                    io.emit(`userStatus-${id}`, { isDeactive: true, userId: id });
+                    delete activeUsers[id];
+                    console.log(`User ${id} disconnected`);
+
+                    await db('profile').where({ user_id: id }).update({ status: 'isDeactive' });
+                });
+            }
+        } catch (error)
+        {
+            console.error(`Error updating statuses in the database: ${error.message}`);
         }
     });
 
-    // Function to log all connected users
-    const logAllConnectedUsers = () =>
-    {
-        console.log('All connected users:');
-        console.log(connectedSockets);
-    };
+
+
+
+
 
 });
 
