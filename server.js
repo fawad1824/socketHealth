@@ -122,7 +122,7 @@ io.on('connection', (socket) =>
     {
         try
         {
-            const { from, to, message, tokens } = data;
+            const { from, to, message, tokens, fcmdata } = data;
             io.emit(`receive-message${to}`, { from, to, message });
             const fromU = await db('profile').where('user_id', from).first();
             const toU = await db('profile').where('user_id', to).first();

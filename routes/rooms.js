@@ -333,7 +333,7 @@ router.post('/chat', async (req, res) =>
 
 router.post('/fcm-token', async (req, res) =>
 {
-    const { tokens, from, to } = req.body;
+    const { tokens, from, to, ACTION, customData } = req.body;
     const fromU = await db('profile').where('user_id', from).first();
     const toU = await db('profile').where('user_id', to).first();
 
@@ -352,17 +352,24 @@ router.post('/fcm-token', async (req, res) =>
         from: fromU,
         to: toU,
     };
+    console.log('====================================');
+    console.log(doc);
+    console.log('====================================');
 
 
     const data = {
         data: {
-            data: doc,
-            ACTION_CALL: 'CALL_ACTION',
-            ACTION_ACCEPT_CALL: 'ACCEPT_CALL_ACTION',
-            ACTION_REJECT_CALL: 'REJECT_CALL_ACTION',
+            "patienr": fromU,
+            "doc_id": fromU.id,
+            "patient_id": toU.id,
+            ACTION: ACTION,
+            customData: customData,
         },
         registration_ids: tokens,
     };
+    console.log('====================================');
+    console.log(data);
+    console.log('====================================');
 
     axios.post('https://fcm.googleapis.com/fcm/send', data, {
         headers: {
@@ -371,7 +378,7 @@ router.post('/fcm-token', async (req, res) =>
         },
     }).then((response) =>
     {
-        return res.status(200).json({ status: true, from: fromU, to: toU, data: response.data, message: 'success' });
+        return res.status(200).json({ status: true, customData: customData, from: fromU, ACTION: ACTION, to: toU, data: response.data, message: 'success' });
     }).catch((error) =>
     {
         return res.status(500).json({ status: false, data: error, message: 'To User not found' });
