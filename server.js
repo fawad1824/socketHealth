@@ -68,7 +68,6 @@ io.on('connection', (socket) =>
                 error: e,
             });
         }
-
     });;
 
     socket.on('offer-acknowledgment', (data) =>
@@ -122,52 +121,70 @@ io.on('connection', (socket) =>
     {
         try
         {
-            const { from, to, message, tokens, fcmdata } = data;
-            io.emit(`receive-message${to}`, { from, to, message });
-            const fromU = await db('profile').where('user_id', from).first();
-            const toU = await db('profile').where('user_id', to).first();
+            const { from, to, message } = data;
+
+            const [fromU, toU] = await Promise.all([
+                db('profile').where('user_id', from).first(),
+                db('profile').where('user_id', to).first()
+            ]);
 
             if (!fromU || !toU)
             {
-                if (!fromU)
-                {
-                    io.emit('notification-error', { status: false, message: 'From User not found' });
-                } else if (!toU)
-                {
-                    io.emit('notification-error', { status: false, message: 'To User not found' });
-                }
+                const errorMsg = !fromU ? 'From User not found' : 'To User not found';
+                io.emit('notification-error', { status: false, message: errorMsg });
+                return;
             }
 
-            const doc = {
-                from: fromU,
-                to: toU,
+            const chatNew = {
+                from_id: from,
+                to_id: to,
+                message,
+                is_read: "1",
+                is_chat: "1",
             };
+
+            const existingMessage = await db('chat')
+                .where('from_id', from)
+                .where('to_id', to)
+                .where('message', message)
+                .first();
+
+            let insertedMessage;
+            if (!existingMessage)
+            {
+                [insertedMessage] = await db('chat').insert(chatNew);
+            } else
+            {
+                insertedMessage = existingMessage;
+            }
 
             const data1 = {
                 data: {
-                    data: doc,
-                    ACTION_MESSAGE: "ACTION_MESSAGE",
-                    ACTION_CALL: 'CALL_ACTION',
-                    ACTION_ACCEPT_CALL: 'ACCEPT_CALL_ACTION',
-                    ACTION_REJECT_CALL: 'REJECT_CALL_ACTION',
+                    fromUser: fromU,
+                    toUser: toU,
+                    ACTION: "MESSAGE",
+                    insertedMessage: parseInt(insertedMessage.id),
+                    message,
                 },
-                registration_ids: tokens,
+                registration_ids: [toU.token],
             };
+            console.log('====================================');
+            console.log(data1);
+            console.log('====================================');
 
-            axios.post('https://fcm.googleapis.com/fcm/send', data1, {
+            const response = await axios.post('https://fcm.googleapis.com/fcm/send', data1, {
                 headers: {
                     Authorization: process.env.FCM_SERVER_KEY,
                     'Content-Type': 'application/json',
                 },
-            }).then((response) =>
-            {
-                console.log(response.data,);
-                console.log("Push notification added");
-                io.emit('notification-success', { status: true, data: response.data, message: 'success' });
-            }).catch((error) =>
-            {
-                console.error('FCM Error:', error.response.data);
-                io.emit('notification-error', { status: false, message: 'Error processing request' });
+            });
+
+            console.log(response.data);
+            console.log("Push notification added");
+
+            io.emit('notification-success', {
+                message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(insertedMessage.id) // Convert to a number
+
             });
         } catch (error)
         {
@@ -175,6 +192,8 @@ io.on('connection', (socket) =>
             io.emit('notification-error', { status: false, message: 'Error processing request' });
         }
     });
+
+
 
 
     socket.on('call-status', (data) =>
@@ -224,6 +243,10 @@ io.on('connection', (socket) =>
             }
         } catch (error)
         {
+            db('logs_sockets').insert({
+                socket_name: `userStatus-${to}`,
+                error: error,
+            });
             console.error(`Error updating statuses in the database: ${error.message}`);
         }
     });
@@ -238,8 +261,7 @@ io.on('connection', (socket) =>
 app.use('/api/', roomsRouter);
 
 const port = process.env.PORT || 3000;
-server.listen(port, () =>
+server.listen(port, '192.168.100.57', () =>
 {
-
     console.log(`Server running on port ${port}`);
 });

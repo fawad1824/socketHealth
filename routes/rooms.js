@@ -280,7 +280,18 @@ router.post('/profile', async (req, res) =>
         const user = await db('profile').where('email', email).first();
         if (user)
         {
-            return res.status(409).json({ status: true, data: user, message: 'User already exists' });
+            const updatedUser = {
+                token
+            };
+            await db('profile')
+                .where('email', email)
+                .update(updatedUser);
+
+            console.log('====================================');
+            console.log(updatedUser);
+            console.log('====================================');
+
+            return res.status(409).json({ status: true, data: user, message: 'User already exists and token updated' });
         } else
         {
             const newUser = {
@@ -289,7 +300,8 @@ router.post('/profile', async (req, res) =>
                 last_name,
                 role,
                 email,
-                token
+                token,
+                status: "isActive"
             };
             await db('profile').insert(newUser);
             return res.status(200).json({ status: true, data: newUser, message: 'User Profile Create' });
