@@ -34,11 +34,13 @@ db.raw('show tables')
         console.error('Error connecting to database:', err);
     });
 
-const activeUsers = {};
+const onlineUsers = new Set();
+
+
+
 
 io.on('connection', (socket) =>
 {
-
     socket.on('offer', (data) =>
     {
         const { targetUserId, offerData, from, iceCandidates } = data;
@@ -53,7 +55,6 @@ io.on('connection', (socket) =>
             });
         }
     });
-
 
     socket.on('make-offer', (data) =>
     {
@@ -101,7 +102,6 @@ io.on('connection', (socket) =>
         }
     });
 
-
     socket.on('ice-candidate', (data) =>
     {
         const { from, targetUserId, iceCandidateData } = data;
@@ -117,11 +117,11 @@ io.on('connection', (socket) =>
         }
     });
 
-    socket.on('message', async (data) =>
+    socket.on('message', async (data, ackCallback) =>
     {
         try
         {
-            const { from, to, message } = data;
+            const { from, to, message, created_time, messageType } = data;
 
             const [fromU, toU] = await Promise.all([
                 db('profile').where('user_id', from).first(),
@@ -141,36 +141,29 @@ io.on('connection', (socket) =>
                 message,
                 is_read: "1",
                 is_chat: "1",
+                messageType: messageType,
+                created_time: created_time
             };
 
-            const existingMessage = await db('chat')
-                .where('from_id', from)
-                .where('to_id', to)
-                .where('message', message)
-                .first();
 
-            let insertedMessage;
-            if (!existingMessage)
-            {
-                [insertedMessage] = await db('chat').insert(chatNew);
-            } else
-            {
-                insertedMessage = existingMessage;
-            }
+            insertedMessage = await db('chat').insert(chatNew);
+            ackCallback("{'msgId':" + insertedMessage + "}");
+            console.log('====================================');
+            console.log(chatNew);
+            console.log(insertedMessage);
+            console.log('====================================');
+
 
             const data1 = {
                 data: {
                     fromUser: fromU,
                     toUser: toU,
                     ACTION: "MESSAGE",
-                    insertedMessage: parseInt(insertedMessage.id),
+                    insertedMessage: parseInt(insertedMessage),
                     message,
                 },
                 registration_ids: [toU.token],
             };
-            console.log('====================================');
-            console.log(data1);
-            console.log('====================================');
 
             const response = await axios.post('https://fcm.googleapis.com/fcm/send', data1, {
                 headers: {
@@ -179,22 +172,28 @@ io.on('connection', (socket) =>
                 },
             });
 
-            console.log(response.data);
-            console.log("Push notification added");
-
             io.emit('notification-success', {
-                message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(insertedMessage.id) // Convert to a number
+                message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(insertedMessage) // Convert to a number
+            });
+
+            // io.emit(`offer-acknowledgment-${to}`, { insertedMessage: parseInt(insertedMessage) });
+
+            io.emit('pushnotification', {
+                data1: data1 // Convert to a number
 
             });
+            io.emit(`receive-message-${to}`, {
+                message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(insertedMessage) // Convert to a number
+
+            });
+
+
         } catch (error)
         {
             console.error('Error:', error);
             io.emit('notification-error', { status: false, message: 'Error processing request' });
         }
     });
-
-
-
 
     socket.on('call-status', (data) =>
     {
@@ -211,49 +210,116 @@ io.on('connection', (socket) =>
         }
     });
 
+    socket.on('message-status', async (data) =>
+    {
+        try
+        {
+            const { message_status, from, to, msgId } = data;
+
+
+            const [fromU, toU] = await Promise.all([
+                db('profile').where('user_id', from).first(),
+                db('profile').where('user_id', to).first()
+            ]);
+
+            if (!fromU || !toU)
+            {
+                const errorMsg = !fromU ? 'From User not found' : 'To User not found';
+                io.emit('notification-error', { status: false, message: errorMsg });
+                return;
+            }
+            const chatNew = {
+                is_read: "0",
+            };
+            const condition = { id: msgId };
+
+            const data1 = {
+                data: {
+                    fromUser: fromU,
+                    toUser: toU,
+                    ACTION: "MESSAGE_STATUS",
+                    is_read: message_status,
+                    msgId: msgId
+                },
+                registration_ids: [toU.token],
+            };
+
+            const response = await axios.post('https://fcm.googleapis.com/fcm/send', data1, {
+                headers: {
+                    Authorization: process.env.FCM_SERVER_KEY,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            console.log('====================================');
+            console.log(response);
+            console.log('====================================');
+
+            io.emit('notification-success', {
+                message, from: fromU, to: toU, msgId: msgId, "ACTION": "MESSAGE_STATUS"
+            });
+
+            io.emit('pushnotification', {
+                data1: data1 // Convert to a number
+
+            });
+            await db('chat').where(condition).update(chatNew);
+
+            io.emit(`message-status-${to}`, { "data": data });
+        } catch (e)
+        {
+            console.error(`Error updating statuses in the database: ${error}`);
+        }
+    });
 
     socket.on('userStatus', async (data) =>
     {
         const { userId } = data;
-
-        if (!userId || !Array.isArray(userId))
-        {
-            return;
-        }
-
         try
         {
-            for (const id of userId)
-            {
-                activeUsers[id] = socket.id;
+            onlineUsers.add(socket.id);
+            await db('profile').where({ user_id: userId }).update({ socket_id: socket.id });
+            await db('profile').where({ user_id: userId }).update({ status: 'isActive' });
+            io.emit(`userOnline-${userId}`, { isActive: true, userId: userId });
 
-                io.to(socket.id).emit(`userStatus-${id}`, { isActive: true, userId: id });
-                console.log(`User ${id} connected with socket ID: ${socket.id}`);
-
-                await db('profile').where({ user_id: id }).update({ status: 'isActive' });
-
-                socket.on(`disconnect-${id}`, async () =>
-                {
-                    io.emit(`userStatus-${id}`, { isDeactive: true, userId: id });
-                    delete activeUsers[id];
-                    console.log(`User ${id} disconnected`);
-
-                    await db('profile').where({ user_id: id }).update({ status: 'isDeactive' });
-                });
-            }
         } catch (error)
         {
-            db('logs_sockets').insert({
-                socket_name: `userStatus-${to}`,
-                error: error,
-            });
             console.error(`Error updating statuses in the database: ${error.message}`);
         }
     });
 
+    socket.on('userStatusCheck', async (data, ackCallback) =>
+    {
+        const { userId } = data;
+        try
+        {
+            onlineUsers.add(socket.id);
+            const statusCheck = await db('profile').where({ user_id: userId });
+            ackCallback({ statusCheck: statusCheck })  // ye wala aesay
+            io.emit(`statusCheck-${userId}`, { statusCheck: statusCheck });
 
+        } catch (error)
+        {
+            console.error(`Error updating statuses in the database: ${error.message}`);
+        }
+    });
 
+    socket.on(`disconnect`, async () =>
+    {
+        onlineUsers.delete(socket.id);
+        const profileData = await db('profile').where({ socket_id: socket.id }).first();
 
+        if (profileData && profileData.user_id)
+        {
+            const userId = profileData.user_id;
+
+            await db('profile').where({ socket_id: socket.id }).update({ status: 'isDeactive' });
+            io.emit(`userOffline-${userId}`, { isActive: false, userId: userId });
+        } else
+        {
+            console.log('No user found with the provided socket_id');
+        }
+    });
 
 
 });

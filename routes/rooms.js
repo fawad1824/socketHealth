@@ -345,7 +345,7 @@ router.post('/chat', async (req, res) =>
 
 router.post('/fcm-token', async (req, res) =>
 {
-    const { tokens, from, to, ACTION, customData } = req.body;
+    const { tokens, from, to, ACTION, customData, message } = req.body;
     const fromU = await db('profile').where('user_id', from).first();
     const toU = await db('profile').where('user_id', to).first();
 
@@ -360,13 +360,30 @@ router.post('/fcm-token', async (req, res) =>
         }
     }
 
-    const doc = {
-        from: fromU,
-        to: toU,
+
+    const chatNew = {
+        from_id: from,
+        to_id: to,
+        message,
+        is_read: "1",
+        is_chat: "1",
     };
-    console.log('====================================');
-    console.log(doc);
-    console.log('====================================');
+
+
+    const existingMessage = await db('chat')
+        .where('from_id', from)
+        .where('to_id', to)
+        .where('message', message)
+        .first();
+
+    let insertedMessage;
+    if (!existingMessage)
+    {
+        [insertedMessage] = await db('chat').insert(chatNew);
+    } else
+    {
+        insertedMessage = existingMessage;
+    }
 
 
     const data = {
@@ -376,12 +393,10 @@ router.post('/fcm-token', async (req, res) =>
             "patient_id": toU.id,
             ACTION: ACTION,
             customData: customData,
+            insertedMessage: parseInt(insertedMessage.id),
         },
         registration_ids: tokens,
     };
-    console.log('====================================');
-    console.log(data);
-    console.log('====================================');
 
     axios.post('https://fcm.googleapis.com/fcm/send', data, {
         headers: {
@@ -390,7 +405,7 @@ router.post('/fcm-token', async (req, res) =>
         },
     }).then((response) =>
     {
-        return res.status(200).json({ status: true, customData: customData, from: fromU, ACTION: ACTION, to: toU, data: response.data, message: 'success' });
+        return res.status(200).json({ status: true, customData: customData, message: message, from: fromU, ACTION: ACTION, to: toU, data: response.data, insertedMessage: parseInt(insertedMessage.id) });
     }).catch((error) =>
     {
         return res.status(500).json({ status: false, data: error, message: 'To User not found' });
