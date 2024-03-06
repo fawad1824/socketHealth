@@ -307,6 +307,28 @@ io.on('connection', (socket) =>
             console.error(`Error updating statuses in the database: ${error.message}`);
         }
     });
+    socket.on(`chat-history`, async (data) =>
+    {
+        const { from, to, msgId } = data;
+        try
+        {
+            const condition = { id: msgId, from_id: from, to_id: to };
+            let history;
+            if (msgId)
+            {
+                history = await db('chat').where(condition).orWhere('id', '>', msgId).select('*');
+            } else
+            {
+                history = await db('chat').where(condition).select('*');
+            }
+            io.emit(`chat-history-${from}-${to}`, { history: history });
+
+        } catch (e)
+        {
+            io.emit(`chat-history-${from}-${to}`, { message: "error in history", error: e });
+        }
+
+    });
 
     socket.on(`disconnect`, async () =>
     {
