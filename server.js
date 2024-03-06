@@ -365,7 +365,7 @@ io.on('connection', (socket) =>
 app.use('/api/', roomsRouter);
 
 const port = process.env.PORT || 3000;
-server.listen(port, '192.168.100.57', () =>
+server.listen(port, () =>
 {
     console.log(`Server running on port ${port}`);
 });
