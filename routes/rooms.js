@@ -4,6 +4,39 @@ const db = require('../db'); // Path to your db.js file
 const Joi = require('joi');
 const axios = require('axios');
 
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs').promises; // Import the 'fs' module with promises
+
+
+const storage = multer.diskStorage({
+    destination: async function (req, file, cb)
+    {
+        const userId = req.body.from; // Assuming 'from' is the user ID in the request body
+        const userFolderPath = path.join('public/uploads', userId.toString());
+
+        try
+        {
+            // Check if the user folder exists, if not, create it
+            await fs.mkdir(userFolderPath, { recursive: true }); // Create directory recursively if it doesn't exist
+            cb(null, userFolderPath);
+        } catch (err)
+        {
+            cb(err);
+        }
+    },
+    filename: function (req, file, cb)
+    {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'attachment_' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+// Initialize multer with storage options
+const upload = multer({ storage: storage });
+
+
+
 // Create Room for Call
 router.post('/room-create', async (req, res) =>
 {
@@ -314,33 +347,57 @@ router.post('/profile', async (req, res) =>
 });
 
 // Chat
-router.post('/chat', async (req, res) =>
+router.post('/chat', upload.single('attachment'), async (req, res) =>
 {
-    const roomSchema = Joi.object({
-        from: Joi.number().required(),
-        to: Joi.number().required(),
-        message: Joi.string().required(),
-    });
-    const { error } = roomSchema.validate(req.body);
-    if (error)
-    {
-        return res.status(400).json({ status: false, message: error.details[0].message });
-    }
     try
     {
         const { from, to, message } = req.body;
+
+        const baseUrl = req.protocol + '://' + req.get('host'); // Extracts the base URL dynamically
+
+        const roomSchema = Joi.object({
+            from: Joi.number().required(),
+            to: Joi.number().required(),
+            // message: Joi.string().required(),
+        });
+
+        const { error } = roomSchema.validate({ from, to });
+
+        if (error)
+        {
+            return res.status(400).json({ status: false, message: error.details[0].message });
+        }
+
+
         const chatNew = {
-            from,
-            to,
-            message,
+            from_id: from,
+            to_id: to,
+            message: message,
+            is_read: "1",
+            is_chat: "1",
         };
-        await db('chat').insert(chatNew);
-        return res.status(200).json({ status: true, data: chatNew, message: 'Chat Created' });
+
+        if (req.file)
+        {
+            const userId = req.body.from; // Assuming 'from' is the user ID in the request body
+            const filePath = `/public/uploads/${userId}/${req.file.filename}`;
+            chatNew.attachment = baseUrl + filePath; // Prepends base URL to the file path
+
+        }
+
+        const [chatList] = await db('chat').insert(chatNew);
+        const insertedChat = await db('chat').where('id', chatList).first();
+
+        return res.status(200).json({ status: true, data: insertedChat, message: 'Chat Created' });
     } catch (error)
     {
-        return res.status(500).json({ status: true, error: error });
+        return res.status(500).json({ status: false, error: error.message });
     }
 });
+
+
+
+
 
 
 router.post('/fcm-token', async (req, res) =>

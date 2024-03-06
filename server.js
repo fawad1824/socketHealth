@@ -7,6 +7,8 @@ const app = express();
 const server = http.createServer(app);
 const db = require('./db'); // Path to your db.js file
 const axios = require('axios');
+const path = require('path');
+
 
 const io = socketIo(server, {
     cors: {
@@ -20,6 +22,8 @@ const roomsRouter = require('./routes/rooms');
 
 // Body parser middleware
 app.use(bodyParser.json());
+
+app.use('/public/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -314,7 +318,41 @@ io.on('connection', (socket) =>
             const userId = profileData.user_id;
 
             await db('profile').where({ socket_id: socket.id }).update({ status: 'isDeactive' });
-            io.emit(`userOffline-${userId}`, { isActive: false, userId: userId });
+            const data = {
+                data: {
+                    "userId": userId,
+                    ACTION: "DISCONNECTED",
+                },
+                registration_ids: [profileData.token],
+            };
+
+            axios.post('https://fcm.googleapis.com/fcm/send', data, {
+                headers: {
+                    Authorization: process.env.FCM_SERVER_KEY,
+                    'Content-Type': 'application/json',
+                },
+            }).then((response) =>
+            {
+                console.log('====================================');
+                console.log(response);
+                console.log('====================================');
+                io.emit(`userOffline-${userId}`, { isActive: false, userId: userId });
+
+                io.emit('notification-success', {
+                    userId: userId, "ACTION": "MESSAGE_STATUS"
+                });
+
+                io.emit('pushnotification', {
+                    data1: data // Convert to a number
+
+                });
+            }).catch((error) =>
+            {
+                console.log('====================================');
+                console.log(error);
+                console.log('====================================');
+                // return res.status(500).json({ status: false, data: error, message: 'To User not found' });
+            });
         } else
         {
             console.log('No user found with the provided socket_id');
