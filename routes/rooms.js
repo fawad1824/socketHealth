@@ -355,18 +355,18 @@ router.post('/chat', upload.single('attachment'), async (req, res) =>
 
         const baseUrl = req.protocol + '://' + req.get('host'); // Extracts the base URL dynamically
 
-        const roomSchema = Joi.object({
-            from: Joi.number().required(),
-            to: Joi.number().required(),
-            // message: Joi.string().required(),
-        });
+        // const roomSchema = Joi.object({
+        //     from: Joi.number().required(),
+        //     to: Joi.number().required(),
+        //     // message: Joi.string().required(),
+        // });
 
-        const { error } = roomSchema.validate({ from, to });
+        // const { error } = roomSchema.validate({ from, to });
 
-        if (error)
-        {
-            return res.status(400).json({ status: false, message: error.details[0].message });
-        }
+        // if (error)
+        // {
+        //     return res.status(400).json({ status: false, message: error.details[0].message });
+        // }
 
 
         const chatNew = {
