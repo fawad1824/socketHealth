@@ -388,7 +388,7 @@ router.post('/chat', upload.single('attachment'), async (req, res) =>
         const [chatList] = await db('chat').insert(chatNew);
         const insertedChat = await db('chat').where('id', chatList).first();
 
-        return res.status(200).json({ status: true, data: insertedChat, requestData: req.body, requestAtt: req.file, message: 'Chat Created' });
+        return res.status(200).json({ status: true, data: insertedChat, message: 'Chat Created' });
     } catch (error)
     {
         return res.status(500).json({ status: false, error: error.message });
