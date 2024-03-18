@@ -120,6 +120,12 @@ io.on('connection', (socket) =>
             });
         }
     });
+    socket.on('test', (data) =>
+    {
+        console.log('====================================');
+        console.log(data);
+        console.log('====================================');
+    });
 
     socket.on('message', async (data, ackCallback) =>
     {
@@ -381,6 +387,10 @@ io.on('connection', (socket) =>
         }
     });
 
+    socket.on('test', (data) =>
+    {
+        console.log('Received data:', data);
+    });
 
 });
 

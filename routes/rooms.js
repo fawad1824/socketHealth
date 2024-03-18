@@ -9,6 +9,9 @@ const path = require('path');
 const fs = require('fs').promises; // Import the 'fs' module with promises
 
 
+
+
+
 const storage = multer.diskStorage({
     destination: async function (req, file, cb)
     {
@@ -34,7 +37,6 @@ const storage = multer.diskStorage({
 
 // Initialize multer with storage options
 const upload = multer({ storage: storage });
-
 
 
 // Create Room for Call
@@ -347,53 +349,46 @@ router.post('/profile', async (req, res) =>
 });
 
 // Chat
-router.post('/chat', upload.single('attachment'), async (req, res) =>
+router.post('/chat', upload.array('attachment'), async (req, res) =>
 {
     try
     {
-        const { from, to, message } = req.body;
+        const { from, to, message, type } = req.body;
 
         const baseUrl = req.protocol + '://' + req.get('host'); // Extracts the base URL dynamically
-
-        // const roomSchema = Joi.object({
-        //     from: Joi.number().required(),
-        //     to: Joi.number().required(),
-        //     // message: Joi.string().required(),
-        // });
-
-        // const { error } = roomSchema.validate({ from, to });
-
-        // if (error)
-        // {
-        //     return res.status(400).json({ status: false, message: error.details[0].message });
-        // }
-
 
         const chatNew = {
             from_id: from,
             to_id: to,
             message: message,
             is_read: "1",
+            type: type,
             is_chat: "1",
         };
 
-        if (req.file)
+        if (req.files && req.files.length > 0)
         {
             const userId = req.body.from; // Assuming 'from' is the user ID in the request body
-            const filePath = `/public/uploads/${userId}/${req.file.filename}`;
-            chatNew.attachment = baseUrl + filePath; // Prepends base URL to the file path
 
+            const attachments = req.files.map(file =>
+            {
+                const filePath = `/public/uploads/${userId}/${file.filename}`;
+                return baseUrl + filePath; // Prepends base URL to each file path
+            });
+
+            chatNew.attachment = JSON.stringify(attachments); // Store attachments as JSON string
         }
 
         const [chatList] = await db('chat').insert(chatNew);
         const insertedChat = await db('chat').where('id', chatList).first();
-
         return res.status(200).json({ status: true, data: insertedChat, message: 'Chat Created' });
     } catch (error)
     {
         return res.status(500).json({ status: false, error: error.message });
     }
 });
+
+
 
 
 
