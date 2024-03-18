@@ -353,7 +353,7 @@ router.post('/chat', upload.array('attachment'), async (req, res) =>
 {
     try
     {
-        const { from, to, message, type } = req.body;
+        const { from, to, message, messagetype } = req.body;
 
         const baseUrl = req.protocol + '://' + req.get('host'); // Extracts the base URL dynamically
 
@@ -362,7 +362,7 @@ router.post('/chat', upload.array('attachment'), async (req, res) =>
             to_id: to,
             message: message,
             is_read: "1",
-            type: type,
+            messagetype: messagetype,
             is_chat: "1",
         };
 

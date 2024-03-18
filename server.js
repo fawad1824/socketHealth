@@ -131,7 +131,7 @@ io.on('connection', (socket) =>
     {
         try
         {
-            const { from, to, message, created_time, messageType } = data;
+            const { from, to, message, created_time, messageType, attachment } = data;
 
             const [fromU, toU] = await Promise.all([
                 db('profile').where('user_id', from).first(),
@@ -145,24 +145,9 @@ io.on('connection', (socket) =>
                 return;
             }
 
-            const chatNew = {
-                from_id: from,
-                to_id: to,
-                message,
-                is_read: "1",
-                is_chat: "1",
-                messageType: messageType,
-                created_time: created_time
-            };
-
-
-            insertedMessage = await db('chat').insert(chatNew);
+            const insertedMessageM = await db('chat').select('id').where('from_id', from).orderBy('id', 'desc').first(); // Fetch the ID of the latest inserted message
+            const insertedMessage = insertedMessageM.id;
             ackCallback("{'msgId':" + insertedMessage + "}");
-            console.log('====================================');
-            console.log(chatNew);
-            console.log(insertedMessage);
-            console.log('====================================');
-
 
             const data1 = {
                 data: {
@@ -170,6 +155,8 @@ io.on('connection', (socket) =>
                     toUser: toU,
                     ACTION: "MESSAGE",
                     insertedMessage: parseInt(insertedMessage),
+                    messageType: messageType,
+                    attachment: attachment,
                     message,
                 },
                 registration_ids: [toU.token],
@@ -183,7 +170,7 @@ io.on('connection', (socket) =>
             });
 
             io.emit('notification-success', {
-                message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(insertedMessage) // Convert to a number
+                message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(insertedMessage), messageType: messageType, attachment: attachment,
             });
 
             // io.emit(`offer-acknowledgment-${to}`, { insertedMessage: parseInt(insertedMessage) });
@@ -193,7 +180,7 @@ io.on('connection', (socket) =>
 
             });
             io.emit(`receive-message-${to}`, {
-                message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(insertedMessage) // Convert to a number
+                message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(insertedMessage), messageType: messageType, attachment: attachment,
 
             });
 
