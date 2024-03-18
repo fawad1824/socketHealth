@@ -376,7 +376,7 @@ router.post('/chat', upload.array('attachment'), async (req, res) =>
                 return baseUrl + filePath; // Prepends base URL to each file path
             });
 
-            chatNew.attachment = JSON.stringify(attachments); // Store attachments as JSON string
+            chatNew.attachment = attachments // Join attachments array with commas
         }
 
         const [chatList] = await db('chat').insert(chatNew);
