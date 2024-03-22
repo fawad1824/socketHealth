@@ -181,7 +181,6 @@ io.on('connection', (socket) =>
             });
             io.emit(`receive-message-${to}`, {
                 message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(insertedMessage), messageType: messageType, attachment: attachment,
-
             });
 
 
