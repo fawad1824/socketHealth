@@ -154,24 +154,17 @@ io.on('connection', (socket) =>
                 is_chat: "1",
             };
 
-            const existingMessage = await db('chat')
-            .where('from_id', from)
-            .where('to_id', to)
-            .where('message', message)
-            .first();
+           
 
-        let insertedMessage;
-        if (!existingMessage)
-        {
-            insertedMessage = await db('chat').insert(chatNew);
-        } else
-        {
-            insertedMessage = existingMessage;
-        }
+  
+            [insertedMessage] = await db('chat').insert(chatNew);
+       
 
 
-            const id = insertedMessage.id;
+
+            const id = insertedMessage;
             console.log(id);
+            console.log(insertedMessage);
             ackCallback("{'msgId':" + id + "}");
 
             const data1 = {
