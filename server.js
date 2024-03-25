@@ -145,16 +145,41 @@ io.on('connection', (socket) =>
                 return;
             }
 
-            const insertedMessageM = await db('chat').select('id').where('from_id', from).orderBy('id', 'desc').first(); // Fetch the ID of the latest inserted message
-            const insertedMessage = insertedMessageM.id;
-            ackCallback("{'msgId':" + insertedMessage + "}");
+
+            const chatNew = {
+                from_id: from,
+                to_id: to,
+                message,
+                is_read: "1",
+                is_chat: "1",
+            };
+
+            const existingMessage = await db('chat')
+            .where('from_id', from)
+            .where('to_id', to)
+            .where('message', message)
+            .first();
+
+        let insertedMessage;
+        if (!existingMessage)
+        {
+            insertedMessage = await db('chat').insert(chatNew);
+        } else
+        {
+            insertedMessage = existingMessage;
+        }
+
+
+            const id = insertedMessage.id;
+            console.log(id);
+            ackCallback("{'msgId':" + id + "}");
 
             const data1 = {
                 data: {
                     fromUser: fromU,
                     toUser: toU,
                     ACTION: "MESSAGE",
-                    insertedMessage: parseInt(insertedMessage),
+                    insertedMessage: parseInt(id),
                     messageType: messageType,
                     attachment: attachment,
                     message,
@@ -170,7 +195,7 @@ io.on('connection', (socket) =>
             });
 
             io.emit('notification-success', {
-                message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(insertedMessage), messageType: messageType, attachment: attachment,
+                message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(id), messageType: messageType, attachment: attachment,
             });
 
             // io.emit(`offer-acknowledgment-${to}`, { insertedMessage: parseInt(insertedMessage) });
@@ -180,7 +205,7 @@ io.on('connection', (socket) =>
 
             });
             io.emit(`receive-message-${to}`, {
-                message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(insertedMessage), messageType: messageType, attachment: attachment,
+                message, from: fromU, to: toU, "ACTION": "MESSAGE", insertedMessage: parseInt(id), messageType: messageType, attachment: attachment,
             });
 
 
