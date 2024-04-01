@@ -154,11 +154,11 @@ io.on('connection', (socket) =>
                 is_chat: "1",
             };
 
-           
 
-  
+
+
             [insertedMessage] = await db('chat').insert(chatNew);
-       
+
 
 
 
@@ -323,13 +323,14 @@ io.on('connection', (socket) =>
         try
         {
             const condition = { id: msgId, from_id: from, to_id: to };
+            const condition2 = { from_id: from, to_id: to };
             let history;
             if (msgId)
             {
                 history = await db('chat').where(condition).orWhere('id', '>', msgId).select('*');
             } else
             {
-                history = await db('chat').where(condition).select('*');
+                history = await db('chat').where(condition2).select('*');
             }
             io.emit(`chat-history-${from}-${to}`, { history: history });
 

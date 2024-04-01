@@ -389,12 +389,6 @@ router.post('/chat', upload.array('attachment'), async (req, res) =>
 });
 
 
-
-
-
-
-
-
 router.post('/fcm-token', async (req, res) =>
 {
     const { tokens, from, to, ACTION, customData, message } = req.body;
