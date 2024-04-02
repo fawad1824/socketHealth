@@ -131,7 +131,9 @@ io.on('connection', (socket) =>
     {
         try
         {
-            const { from, to, message, created_time, messageType, attachment } = data;
+            const { from, to, message, messageType, attachment } = data;
+            const localDate = new Date(); // Assume this is a local date and time
+            const utcDateString = localDate.toISOString();
 
             const [fromU, toU] = await Promise.all([
                 db('profile').where('user_id', from).first(),
@@ -150,6 +152,8 @@ io.on('connection', (socket) =>
                 from_id: from,
                 to_id: to,
                 message,
+                created_time: utcDateString,
+                messageType: messageType
                 is_read: "1",
                 is_chat: "1",
             };
