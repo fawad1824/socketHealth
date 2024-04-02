@@ -153,7 +153,7 @@ io.on('connection', (socket) =>
                 to_id: to,
                 message,
                 created_time: utcDateString,
-                messageType: messageType
+                messageType: messageType,
                 is_read: "1",
                 is_chat: "1",
             };
