@@ -154,6 +154,7 @@ io.on('connection', (socket) =>
                 message,
                 created_time: utcDateString,
                 messageType: messageType,
+                type: messageType,
                 is_read: "1",
                 is_chat: "1",
             };
