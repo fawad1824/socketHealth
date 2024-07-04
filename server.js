@@ -407,7 +407,9 @@ io.on('connection', (socket) =>
 app.use('/api/', roomsRouter);
 
 const port = process.env.PORT || 3000;
-server.listen(port, () =>
+const ipAddress = '192.168.110.179';
+
+server.listen(port, ipAddress, () =>
 {
     console.log(`Server running on port ${port}`);
 });
