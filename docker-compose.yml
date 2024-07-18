@@ -1,0 +1,45 @@
+version: '3.8'
+x-project-name: &project-name AudioVideoSockets
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: audio_video_app
+    env_file: .env
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_HOST=db
+      - DATABASE_URL=mysql://rootP:rootP@db:3306/sockets
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - db
+    networks:
+      - mynetwork
+
+  db:
+    image: mysql:5.7
+    container_name: audio_video_db
+    environment:
+      MYSQL_DATABASE: sockets
+      MYSQL_USER: rootP
+      MYSQL_PASSWORD: rootP
+      MYSQL_ROOT_PASSWORD: rootpassword
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./sockets.sql:/docker-entrypoint-initdb.d/sockets.sql
+    ports:
+      - "3308:3306"
+    networks:
+      - mynetwork
+
+volumes:
+  db_data:
+
+networks:
+  mynetwork:

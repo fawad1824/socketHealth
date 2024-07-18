@@ -1,5 +1,6 @@
-const express = require('express');
 require('dotenv').config();
+const express = require('express');
+
 const http = require('http');
 const socketIo = require('socket.io');
 const bodyParser = require('body-parser');
@@ -9,6 +10,16 @@ const db = require('./db'); // Path to your db.js file
 const axios = require('axios');
 const path = require('path');
 
+
+db.raw('show tables')
+    .then(() =>
+    {
+        console.log('Database connected!');
+    })
+    .catch((err) =>
+    {
+        console.error('Error connecting to database:', err);
+    });
 
 const io = socketIo(server, {
     cors: {
@@ -27,16 +38,6 @@ app.use('/public/uploads', express.static(path.join(__dirname, 'public', 'upload
 
 app.use(bodyParser.urlencoded({ extended: true }));
 
-
-db.raw('show tables')
-    .then(() =>
-    {
-        console.log('Database connected!');
-    })
-    .catch((err) =>
-    {
-        console.error('Error connecting to database:', err);
-    });
 
 const onlineUsers = new Set();
 
@@ -407,7 +408,9 @@ io.on('connection', (socket) =>
 app.use('/api/', roomsRouter);
 
 const port = process.env.PORT || 3000;
-server.listen(port, () =>
+const ipAddress = '127.0.0.1';
+
+server.listen(port/*, ipAddress*/, () =>
 {
     console.log(`Server running on port ${port}`);
 });
