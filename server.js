@@ -12,12 +12,10 @@ const path = require('path');
 
 
 db.raw('show tables')
-    .then(() =>
-    {
+    .then(() => {
         console.log('Database connected!');
     })
-    .catch((err) =>
-    {
+    .catch((err) => {
         console.error('Error connecting to database:', err);
     });
 
@@ -44,16 +42,12 @@ const onlineUsers = new Set();
 
 
 
-io.on('connection', (socket) =>
-{
-    socket.on('offer', (data) =>
-    {
+io.on('connection', (socket) => {
+    socket.on('offer', (data) => {
         const { targetUserId, offerData, from, iceCandidates } = data;
-        try
-        {
+        try {
             io.emit(`offer-${targetUserId}`, { "offerData": offerData, "from": from, "targetUserId": targetUserId, "iceCandidates": iceCandidates });
-        } catch (e)
-        {
+        } catch (e) {
             db('logs_sockets').insert({
                 socket_name: `offer-${targetUserId}`,
                 error: e.message, // Access the error message here
@@ -61,14 +55,11 @@ io.on('connection', (socket) =>
         }
     });
 
-    socket.on('make-offer', (data) =>
-    {
+    socket.on('make-offer', (data) => {
         const { targetUserId, from } = data;
-        try
-        {
+        try {
             io.emit(`make-offer-${targetUserId}`, { "from": from, "targetUserId": targetUserId });
-        } catch (e)
-        {
+        } catch (e) {
             db('logs_sockets').insert({
                 socket_name: `make-offer-${targetUserId}`,
                 error: e,
@@ -76,14 +67,11 @@ io.on('connection', (socket) =>
         }
     });;
 
-    socket.on('offer-acknowledgment', (data) =>
-    {
+    socket.on('offer-acknowledgment', (data) => {
         const { from, targetUserId, offerData } = data;
-        try
-        {
+        try {
             io.emit(`offer-acknowledgment-${targetUserId}`, { "offer": offerData, "from": from, "targetUserId": targetUserId });
-        } catch (e)
-        {
+        } catch (e) {
             db('logs_sockets').insert({
                 socket_name: `offer-acknowledgment-${targetUserId}`,
                 error: e,
@@ -92,14 +80,11 @@ io.on('connection', (socket) =>
 
     });
 
-    socket.on('answer', (data) =>
-    {
+    socket.on('answer', (data) => {
         const { targetUserId, answerData, from } = data;
-        try
-        {
+        try {
             io.emit(`answer-${targetUserId}`, { "answerData": answerData, "from": from, "targetUserId": targetUserId });
-        } catch (e)
-        {
+        } catch (e) {
             db('logs_sockets').insert({
                 socket_name: `answer-${targetUserId}`,
                 error: e,
@@ -107,31 +92,25 @@ io.on('connection', (socket) =>
         }
     });
 
-    socket.on('ice-candidate', (data) =>
-    {
+    socket.on('ice-candidate', (data) => {
         const { from, targetUserId, iceCandidateData } = data;
-        try
-        {
+        try {
             io.emit(`ice-candidate-${targetUserId}`, { iceCandidateData, from, targetUserId });
-        } catch (e)
-        {
+        } catch (e) {
             db('logs_sockets').insert({
                 socket_name: `ice-candidate-${targetUserId}`,
                 error: e,
             });
         }
     });
-    socket.on('test', (data) =>
-    {
+    socket.on('test', (data) => {
         console.log('====================================');
         console.log(data);
         console.log('====================================');
     });
 
-    socket.on('message', async (data, ackCallback) =>
-    {
-        try
-        {
+    socket.on('message', async (data, ackCallback) => {
+        try {
             const { from, to, message, messageType, attachment } = data;
             const localDate = new Date(); // Assume this is a local date and time
             const utcDateString = localDate.toISOString();
@@ -141,8 +120,7 @@ io.on('connection', (socket) =>
                 db('profile').where('user_id', to).first()
             ]);
 
-            if (!fromU || !toU)
-            {
+            if (!fromU || !toU) {
                 const errorMsg = !fromU ? 'From User not found' : 'To User not found';
                 io.emit('notification-error', { status: false, message: errorMsg });
                 return;
@@ -208,21 +186,17 @@ io.on('connection', (socket) =>
             });
 
 
-        } catch (error)
-        {
+        } catch (error) {
             console.error('Error:', error);
             io.emit('notification-error', { status: false, message: 'Error processing request' });
         }
     });
 
-    socket.on('call-status', (data) =>
-    {
+    socket.on('call-status', (data) => {
         const { from, targetUserId, call_status } = data;
-        try
-        {
+        try {
             io.emit(`call-status-${targetUserId}`, { call_status, from, targetUserId });
-        } catch (e)
-        {
+        } catch (e) {
             db('logs_sockets').insert({
                 socket_name: `call-status-${targetUserId}`,
                 error: e,
@@ -230,10 +204,8 @@ io.on('connection', (socket) =>
         }
     });
 
-    socket.on('message-status', async (data) =>
-    {
-        try
-        {
+    socket.on('message-status', async (data) => {
+        try {
             const { message_status, from, to, msgId } = data;
 
 
@@ -242,8 +214,7 @@ io.on('connection', (socket) =>
                 db('profile').where('user_id', to).first()
             ]);
 
-            if (!fromU || !toU)
-            {
+            if (!fromU || !toU) {
                 const errorMsg = !fromU ? 'From User not found' : 'To User not found';
                 io.emit('notification-error', { status: false, message: errorMsg });
                 return;
@@ -286,74 +257,60 @@ io.on('connection', (socket) =>
             await db('chat').where(condition).update(chatNew);
 
             io.emit(`message-status-${to}`, { "data": data });
-        } catch (e)
-        {
+        } catch (e) {
             console.error(`Error updating statuses in the database: ${error}`);
         }
     });
 
-    socket.on('userStatus', async (data) =>
-    {
+    socket.on('userStatus', async (data) => {
         const { userId } = data;
-        try
-        {
+        try {
             onlineUsers.add(socket.id);
             await db('profile').where({ user_id: userId }).update({ socket_id: socket.id });
             await db('profile').where({ user_id: userId }).update({ status: 'isActive' });
             io.emit(`userOnline-${userId}`, { isActive: true, userId: userId });
 
-        } catch (error)
-        {
+        } catch (error) {
             console.error(`Error updating statuses in the database: ${error.message}`);
         }
     });
 
-    socket.on('userStatusCheck', async (data, ackCallback) =>
-    {
+    socket.on('userStatusCheck', async (data, ackCallback) => {
         const { userId } = data;
-        try
-        {
+        try {
             onlineUsers.add(socket.id);
             const statusCheck = await db('profile').where({ user_id: userId });
             ackCallback({ statusCheck: statusCheck })  // ye wala aesay
             io.emit(`statusCheck-${userId}`, { statusCheck: statusCheck });
 
-        } catch (error)
-        {
+        } catch (error) {
             console.error(`Error updating statuses in the database: ${error.message}`);
         }
     });
-    socket.on(`chat-history`, async (data) =>
-    {
+    socket.on(`chat-history`, async (data) => {
         const { from, to, msgId } = data;
-        try
-        {
+        try {
             const condition = { id: msgId, from_id: from, to_id: to };
             const condition2 = { from_id: from, to_id: to };
             let history;
-            if (msgId)
-            {
+            if (msgId) {
                 history = await db('chat').where(condition).orWhere('id', '>', msgId).select('*');
-            } else
-            {
+            } else {
                 history = await db('chat').where(condition2).select('*');
             }
             io.emit(`chat-history-${from}-${to}`, { history: history });
 
-        } catch (e)
-        {
+        } catch (e) {
             io.emit(`chat-history-${from}-${to}`, { message: "error in history", error: e });
         }
 
     });
 
-    socket.on(`disconnect`, async () =>
-    {
+    socket.on(`disconnect`, async () => {
         onlineUsers.delete(socket.id);
         const profileData = await db('profile').where({ socket_id: socket.id }).first();
 
-        if (profileData && profileData.user_id)
-        {
+        if (profileData && profileData.user_id) {
             const userId = profileData.user_id;
 
             await db('profile').where({ socket_id: socket.id }).update({ status: 'isDeactive' });
@@ -370,8 +327,7 @@ io.on('connection', (socket) =>
                     Authorization: process.env.FCM_SERVER_KEY,
                     'Content-Type': 'application/json',
                 },
-            }).then((response) =>
-            {
+            }).then((response) => {
                 console.log('====================================');
                 console.log(response);
                 console.log('====================================');
@@ -385,21 +341,18 @@ io.on('connection', (socket) =>
                     data1: data // Convert to a number
 
                 });
-            }).catch((error) =>
-            {
+            }).catch((error) => {
                 console.log('====================================');
                 console.log(error);
                 console.log('====================================');
                 // return res.status(500).json({ status: false, data: error, message: 'To User not found' });
             });
-        } else
-        {
+        } else {
             console.log('No user found with the provided socket_id');
         }
     });
 
-    socket.on('test', (data) =>
-    {
+    socket.on('test', (data) => {
         console.log('Received data:', data);
     });
 
@@ -408,9 +361,7 @@ io.on('connection', (socket) =>
 app.use('/api/', roomsRouter);
 
 const port = process.env.PORT || 3000;
-const ipAddress = '127.0.0.1';
 
-server.listen(port/*, ipAddress*/, () =>
-{
+server.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });

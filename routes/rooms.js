@@ -312,7 +312,7 @@ router.post('/profile', async (req, res) =>
     const { user_id, first_name, last_name, role, email, token } = req.body;
     try
     {
-        const user = await db('profile').where('email', email).first();
+        const user = await db('profile').where('user_id', user_id).first();
         if (user)
         {
             const updatedUser = {
