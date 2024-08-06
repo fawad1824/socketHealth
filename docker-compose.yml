@@ -21,8 +21,8 @@ services:
     image: nginx:latest
     container_name: audio_video_nginx
     volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./docker/ssl:/etc/nginx/ssl:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
     ports:
       - "3002:3002"
       - "444:444"
