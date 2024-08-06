@@ -3,11 +3,12 @@ const express = require('express');
 const https = require('https');
 const socketIo = require('socket.io');
 const bodyParser = require('body-parser');
-const fs = require('fs'); // Import fs module
+const fs = require('fs');
+const path = require('path');
+const cors = require('cors'); // Import CORS module
 const app = express();
 const db = require('./db'); // Path to your db.js file
 const axios = require('axios');
-const path = require('path');
 
 // Load SSL certificate and key
 const options = {
@@ -17,8 +18,7 @@ const options = {
 
 const server = https.createServer(options, app);
 
-
-
+// Test database connection
 db.raw('show tables')
     .then(() => {
         console.log('Database connected!');
@@ -26,6 +26,19 @@ db.raw('show tables')
     .catch((err) => {
         console.error('Error connecting to database:', err);
     });
+
+// Middleware
+app.use(cors({
+    origin: '*', // Allow requests from this origin
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true, // Allow credentials if necessary
+}));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Serve static files
+app.use('/public/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 const io = socketIo(server, {
     cors: {
