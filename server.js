@@ -17,6 +17,11 @@ const options = {
 
 const server = https.createServer(options, app);
 
+app.use(cors({
+    origin: '*', // Allow requests from this origin
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true, // Allow credentials if necessary
+}));
 
 db.raw('show tables')
     .then(() => {
