@@ -1,11 +1,15 @@
 require('dotenv').config();
 const express = require('express');
+
 const https = require('https');
-const fs = require('fs');
 const socketIo = require('socket.io');
 const bodyParser = require('body-parser');
-const path = require('path');
 const app = express();
+const db = require('./db'); // Path to your db.js file
+const axios = require('axios');
+const path = require('path');
+
+
 
 // Load SSL certificate and key
 const options = {
@@ -14,6 +18,7 @@ const options = {
 };
 
 const server = https.createServer(options, app);
+
 const io = socketIo(server, {
     cors: {
         origin: '*',
