@@ -17,11 +17,7 @@ const options = {
 
 const server = https.createServer(options, app);
 
-app.use(cors({
-    origin: '*', // Allow requests from this origin
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true, // Allow credentials if necessary
-}));
+
 
 db.raw('show tables')
     .then(() => {
@@ -42,6 +38,14 @@ const io = socketIo(server, {
 const roomsRouter = require('./routes/rooms');
 
 // Body parser middleware
+
+app.use(cors({
+    origin: 'http://localhost:3000', // Allow requests from this origin
+    methods: ['GET', 'POST', 'PUT'],
+    allowedHeaders: ['Content-Type'],
+    credentials: true
+}));
+
 app.use(bodyParser.json());
 
 app.use('/public/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
