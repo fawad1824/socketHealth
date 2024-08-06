@@ -1,23 +1,23 @@
 require('dotenv').config();
 const express = require('express');
 
-const http = require('http');
+const https = require('https');
 const socketIo = require('socket.io');
 const bodyParser = require('body-parser');
 const app = express();
-const server = http.createServer(app);
 const db = require('./db'); // Path to your db.js file
 const axios = require('axios');
 const path = require('path');
 
 
-db.raw('show tables')
-    .then(() => {
-        console.log('Database connected!');
-    })
-    .catch((err) => {
-        console.error('Error connecting to database:', err);
-    });
+
+// Load SSL certificate and key
+const options = {
+    key: fs.readFileSync('/etc/nginx/ssl/www_brightspace_health.key'),
+    cert: fs.readFileSync('/etc/nginx/ssl/www_brightspace_health.crt')
+};
+
+const server = https.createServer(options, app);
 
 const io = socketIo(server, {
     cors: {
@@ -27,20 +27,29 @@ const io = socketIo(server, {
         credentials: true,
     },
 });
+
+const db = require('./db'); // Path to your db.js file
+const axios = require('axios');
 const roomsRouter = require('./routes/rooms');
+
+// Connect to the database
+db.raw('show tables')
+    .then(() => {
+        console.log('Database connected!');
+    })
+    .catch((err) => {
+        console.error('Error connecting to database:', err);
+    });
 
 // Body parser middleware
 app.use(bodyParser.json());
-
-app.use('/public/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
-
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Serve static files
+app.use('/public/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
-const onlineUsers = new Set();
-
-
-
+// API routes
+app.use('/api/', roomsRouter);
 
 io.on('connection', (socket) => {
     socket.on('offer', (data) => {
@@ -358,10 +367,10 @@ io.on('connection', (socket) => {
 
 });
 
-app.use('/api/', roomsRouter);
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 444; // Use 443 for HTTPS
 
+// Start the server
 server.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    console.log(`Server is running on https://:3001`);
 });
