@@ -8,9 +8,6 @@ services:
       dockerfile: Dockerfile
     container_name: audio_video_app
     env_file: .env
-    ports:
-      - "3001:3001"
-      - "444:444"
     environment:
       - NODE_ENV=development
       - DATABASE_HOST=db
@@ -18,10 +15,20 @@ services:
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
+    networks:
+      - mynetwork
+
+  nginx:
+    image: nginx:latest
+    container_name: audio_video_nginx
+    volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
       - ./docker/ssl:/etc/nginx/ssl
+    ports:
+      - "80:80"
+      - "444:444"
     depends_on:
-      - db
+      - app
     networks:
       - mynetwork
 
