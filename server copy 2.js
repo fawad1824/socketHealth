@@ -1,15 +1,13 @@
 require('dotenv').config();
 const express = require('express');
-
 const https = require('https');
 const socketIo = require('socket.io');
 const bodyParser = require('body-parser');
+const fs = require('fs'); // Import fs module
 const app = express();
 const db = require('./db'); // Path to your db.js file
 const axios = require('axios');
 const path = require('path');
-
-
 
 // Load SSL certificate and key
 const options = {

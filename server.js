@@ -1,14 +1,21 @@
 require('dotenv').config();
 const express = require('express');
-
-const http = require('http');
+const https = require('https');
 const socketIo = require('socket.io');
 const bodyParser = require('body-parser');
+const fs = require('fs'); // Import fs module
 const app = express();
-const server = http.createServer(app);
 const db = require('./db'); // Path to your db.js file
 const axios = require('axios');
 const path = require('path');
+
+// Load SSL certificate and key
+const options = {
+    key: fs.readFileSync('/etc/nginx/ssl/www_brightspace_health.key'),
+    cert: fs.readFileSync('/etc/nginx/ssl/www_brightspace_health.crt')
+};
+
+const server = https.createServer(options, app);
 
 
 db.raw('show tables')
