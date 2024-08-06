@@ -9,8 +9,8 @@ const app = express();
 
 // Load SSL certificate and key
 const options = {
-    key: fs.readFileSync('/etc/nginx/ssl/subdomain.yourdomain.com.key'),
-    cert: fs.readFileSync('/etc/nginx/ssl/subdomain.yourdomain.com.crt')
+    key: fs.readFileSync('/etc/nginx/ssl/www_brightspace_health.key'),
+    cert: fs.readFileSync('/etc/nginx/ssl/www_brightspace_health.crt')
 };
 
 const server = https.createServer(options, app);
