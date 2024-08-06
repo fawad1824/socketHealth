@@ -1,4 +1,4 @@
-const socket = io('http://localhost:8080'); // Connect to the server
+const socket = io('http://localhost:8006'); // Connect to the server
 
 const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('remoteVideo');
