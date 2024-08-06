@@ -294,6 +294,7 @@ io.on('connection', (socket) => {
             console.error(`Error updating statuses in the database: ${error.message}`);
         }
     });
+
     socket.on(`chat-history`, async (data) => {
         const { from, to, msgId } = data;
         try {
@@ -360,7 +361,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('test', (data) => {
-        console.log('Received data:', data);
+
+        io.emit('test-success', {
+            data: data,
+        });
     });
 
 });
