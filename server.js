@@ -367,5 +367,5 @@ const port = process.env.PORT || 444; // Use 443 for HTTPS
 
 // Start the server
 server.listen(port, () => {
-    console.log(`Server is running on https://sockets.brightspace.health`);
+    console.log(`Server is running on https://:3001`);
 });
