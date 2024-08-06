@@ -10,7 +10,7 @@ services:
     env_file: .env
     ports:
       - "3001:3001"
-      - "443:443"
+      - "444:444"
     environment:
       - NODE_ENV=development
       - DATABASE_HOST=db
