@@ -1,33 +1,15 @@
 require('dotenv').config();
 const express = require('express');
 const https = require('https');
-const fs = require('fs');
 const socketIo = require('socket.io');
 const bodyParser = require('body-parser');
-const path = require('path');
 const app = express();
-
-// Load SSL certificate and key
-const options = {
-    key: fs.readFileSync('/etc/nginx/ssl/subdomain.yourdomain.com.key'),
-    cert: fs.readFileSync('/etc/nginx/ssl/subdomain.yourdomain.com.crt')
-};
-
-const server = https.createServer(options, app);
-const io = socketIo(server, {
-    cors: {
-        origin: '*',
-        methods: ['GET', 'POST', 'PUT'],
-        allowedHeaders: ['Content-Type'],
-        credentials: true,
-    },
-});
-
+const server = https.createServer(app);
 const db = require('./db'); // Path to your db.js file
 const axios = require('axios');
-const roomsRouter = require('./routes/rooms');
+const path = require('path');
 
-// Connect to the database
+
 db.raw('show tables')
     .then(() => {
         console.log('Database connected!');
@@ -36,15 +18,33 @@ db.raw('show tables')
         console.error('Error connecting to database:', err);
     });
 
+const io = socketIo(server, {
+    cors: {
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT'],
+        allowedHeaders: ['Content-Type'],
+        credentials: true,
+    },
+});
+const roomsRouter = require('./routes/rooms');
+
+const options = {
+    key: fs.readFileSync(' /etc/nginx/ssl/www_brightspace_health.key'),
+    cert: fs.readFileSync(' /etc/nginx/ssl/www_brightspace_health.crt')
+};
+
 // Body parser middleware
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve static files
 app.use('/public/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
-// API routes
-app.use('/api/', roomsRouter);
+app.use(bodyParser.urlencoded({ extended: true }));
+
+
+const onlineUsers = new Set();
+
+
+
 
 io.on('connection', (socket) => {
     socket.on('offer', (data) => {
@@ -362,10 +362,17 @@ io.on('connection', (socket) => {
 
 });
 
+app.use('/api/', roomsRouter);
 
-const port = process.env.PORT || 443; // Use 443 for HTTPS
+const port = process.env.PORT || 3000;
 
 // Start the server
-server.listen(port, () => {
-    console.log(`Server is running on https://subdomain.yourdomain.com:${port}`);
+https.createServer(options, app).listen(443, () => {
+    console.log('Server is running on https://localhost');
+  });
+
+  
+
+server.listen(port/*, ipAddress*/, () => {
+    console.log(`Server running on port ${port}`);
 });
