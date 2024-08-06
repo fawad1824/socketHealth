@@ -367,7 +367,7 @@ app.use('/api/', roomsRouter);
 const port = process.env.PORT || 3000;
 
 // Start the server
-https.createServer(options, app).listen(443, () => {
+https.createServer(options, app).listen(port, () => {
     console.log('Server is running on https://localhost');
   });
 

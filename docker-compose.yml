@@ -8,26 +8,18 @@ services:
       dockerfile: Dockerfile
     container_name: audio_video_app
     env_file: .env
+    ports:
+      - "3001:3001"
     environment:
       - NODE_ENV=development
       - DATABASE_HOST=db
       - DATABASE_URL=mysql://rootP:rootP@db:3306/sockets
-    ports:
-      - "3001:3001"
-    networks:
-      - mynetwork
-
-  nginx:
-    image: nginx:latest
-    container_name: audio_video_nginx
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-    ports:
-      - "3002:3002"
-      - "444:444"
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - ./ssl:/etc/nginx/ssl
     depends_on:
-      - app
+      - db
     networks:
       - mynetwork
 
