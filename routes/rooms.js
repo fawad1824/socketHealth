@@ -326,7 +326,7 @@ router.post('/profile', async (req, res) =>
             console.log(updatedUser);
             console.log('====================================');
 
-            return res.status(409).json({ status: true, data: user, message: 'User already exists and token updated' });
+            return res.status(200).json({ status: true, data: user, message: 'User already exists and token updated' });
         } else
         {
             const newUser = {

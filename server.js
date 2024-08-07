@@ -53,7 +53,7 @@ const roomsRouter = require('./routes/rooms');
 // Body parser middleware
 
 app.use(cors({
-    origin: 'http://localhost:3000', // Allow requests from this origin
+    origin: '*', // Allow requests from this origin
     methods: ['GET', 'POST', 'PUT'],
     allowedHeaders: ['Content-Type'],
     credentials: true
