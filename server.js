@@ -13,7 +13,8 @@ const axios = require('axios');
 // Load SSL certificate and key
 const options = {
     key: fs.readFileSync('/etc/nginx/ssl/www_brightspace_health.key'),
-    cert: fs.readFileSync('/etc/nginx/ssl/www_brightspace_health.crt')
+    cert: fs.readFileSync('/etc/nginx/ssl/www_brightspace_health.crt'),
+    ca: fs.readFileSync('/etc/nginx/ssl/www_brightspace_health.ca-bundle')
 };
 
 const server = https.createServer(options, app);
